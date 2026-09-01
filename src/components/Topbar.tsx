@@ -42,6 +42,8 @@ interface TopbarProps {
   onOpenAutoRepair?: () => void;
   onOpenCyberAwareness?: () => void;
   onOpenAntivirus?: () => void;
+  onOpenIncidentResponse?: () => void;
+  incidentCount?: number;
   issueCount?: number;
   onResetDemo: () => void;
   onClearAll: () => void;
@@ -75,7 +77,10 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenAutoRepair,
   onOpenCyberAwareness,
   onOpenAntivirus,
+  onOpenIncidentResponse,
+  incidentCount = 0,
   issueCount = 0,
+
   onResetDemo,
   onClearAll,
   nodeCount,
@@ -272,6 +277,23 @@ export const Topbar: React.FC<TopbarProps> = ({
           >
             <Flame className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
             <span>Hot-Map & Awareness</span>
+          </button>
+        )}
+
+        {/* Incident Response Dashboard Button */}
+        {onOpenIncidentResponse && (
+          <button
+            onClick={onOpenIncidentResponse}
+            title="Öppna Incident Response & Cyber Kill-Chain Dashboard (Tidslinje, MITRE ATT&CK och Containment)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition bg-gradient-to-r from-rose-500/20 via-red-500/20 to-amber-500/20 hover:from-rose-500/30 hover:to-amber-500/30 text-rose-300 border border-rose-500/50 hover:border-rose-400 shadow-sm shadow-rose-950/40 cursor-pointer"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+            <span>Incident Response</span>
+            {incidentCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-slate-950 text-[10px] font-black font-mono">
+                {incidentCount}
+              </span>
+            )}
           </button>
         )}
 

@@ -13,6 +13,7 @@ import { IpConfigModal } from './components/IpConfigModal';
 import { AutoRepairModal } from './components/AutoRepairModal';
 import { CyberAwarenessModal } from './components/CyberAwarenessModal';
 import { AntivirusModal } from './components/AntivirusModal';
+import { IncidentResponseModal } from './components/IncidentResponseModal';
 import { ContainerModal } from './components/ContainerModal';
 import { LayoutOptimizerModal } from './components/LayoutOptimizerModal';
 import { ScenarioModal } from './components/ScenarioModal';
@@ -30,7 +31,12 @@ import {
   ProblemScenario,
   CapturedPacket,
   NetworkContainer,
+  IncidentLog,
 } from './types';
+import {
+  createIncidentFromPacket,
+  generateInitialIncidentLogs,
+} from './utils/incidentManager';
 import {
   computeNetworkConnectivity,
   findPathAndSimulate,
@@ -240,8 +246,24 @@ export default function App() {
   const [showAutoRepairModal, setShowAutoRepairModal] = useState(false);
   const [showCyberAwarenessModal, setShowCyberAwarenessModal] = useState(false);
   const [showAntivirusModal, setShowAntivirusModal] = useState(false);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showLayoutOptimizerModal, setShowLayoutOptimizerModal] = useState(false);
   const [showVisualDebugger, setShowVisualDebugger] = useState(false);
+
+  // Incident Response Realtime Tracker State
+  const [incidents, setIncidents] = useState<IncidentLog[]>([]);
+
+  // Seed initial incident logs if hackers/infected nodes exist in topology
+  useEffect(() => {
+    if (nodes.length > 0) {
+      setIncidents((prev) => {
+        if (prev.length === 0) {
+          return generateInitialIncidentLogs(nodes, links);
+        }
+        return prev;
+      });
+    }
+  }, [nodes, links]);
 
   // Layout Optimization Handler
   const handleApplyLayout = (updatedNodes: Device[], historyLabel: string = 'D3 Layout-optimering') => {
@@ -517,6 +539,12 @@ export default function App() {
           }
 
           setCapturedPackets((prev) => [newPkt, ...prev.slice(0, 199)]);
+
+          // Push to Incident Response Real-Time Dashboard
+          const incidentEntry = createIncidentFromPacket(newPkt, nodes);
+          if (incidentEntry) {
+            setIncidents((prev) => [incidentEntry, ...prev.slice(0, 99)]);
+          }
 
           // Mark target node infected if attack succeeds and breach occurred
           if (res.success && finalDetails.isBreach) {
@@ -1191,6 +1219,8 @@ export default function App() {
         onOpenAutoRepair={() => setShowAutoRepairModal(true)}
         onOpenCyberAwareness={() => setShowCyberAwarenessModal(true)}
         onOpenAntivirus={() => setShowAntivirusModal(true)}
+        onOpenIncidentResponse={() => setShowIncidentModal(true)}
+        incidentCount={incidents.length}
         issueCount={detectedIssues.length}
         onResetDemo={() => {
           const preset = SCENARIOS.find((s) => s.id === currentScenarioId) || SCENARIOS[0];
@@ -1597,6 +1627,23 @@ export default function App() {
         onSelectScenario={handleSelectProblemScenario}
         completedScenarioIds={completedScenarioIds}
         activeScenarioId={activeProblemScenario?.id}
+      />
+
+      {/* Incident Response & Cyber Kill-Chain Dashboard */}
+      <IncidentResponseModal
+        isOpen={showIncidentModal}
+        onClose={() => setShowIncidentModal(false)}
+        incidents={incidents}
+        nodes={nodes}
+        links={links}
+        onUpdateNode={handleUpdateNode}
+        onUpdateMultipleNodes={handleUpdateMultipleNodes}
+        onClearIncidents={() => setIncidents([])}
+        onSelectNodeOnCanvas={(id) => {
+          setSelectedNodeId(id);
+          setSelectedNodeIds([id]);
+        }}
+        onOpenAntivirus={() => setShowAntivirusModal(true)}
       />
     </div>
   );

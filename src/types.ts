@@ -266,3 +266,36 @@ export interface TestResult {
   packetLoss: number;
   logs: string[];
 }
+
+export type CyberKillChainStage =
+  | 'RECONNAISSANCE'
+  | 'INITIAL_ACCESS'
+  | 'EXECUTION'
+  | 'PERSISTENCE'
+  | 'LATERAL_MOVEMENT'
+  | 'DATA_EXFILTRATION'
+  | 'IMPACT';
+
+export type IncidentSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'INFO';
+
+export interface IncidentLog {
+  id: string;
+  timestamp: string;
+  stage: CyberKillChainStage;
+  severity: IncidentSeverity;
+  title: string;
+  mitreId: string;
+  mitreName: string;
+  sourceNodeId: string;
+  sourceNodeName: string;
+  sourceIp: string;
+  targetNodeId: string;
+  targetNodeName: string;
+  targetIp: string;
+  protocol: string;
+  payloadSummary?: string;
+  description: string;
+  recommendedAction: string;
+  isContained?: boolean;
+  status: 'ACTIVE' | 'CONTAINED' | 'INVESTIGATING';
+}
