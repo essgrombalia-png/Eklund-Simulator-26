@@ -21,8 +21,10 @@ import {
   Globe,
   SlidersHorizontal,
   ChevronDown,
+  StickyNote as StickyNoteIcon,
+  Plus,
 } from 'lucide-react';
-import { DeviceType, CableType } from '../types';
+import { DeviceType, CableType, StickyNoteColor } from '../types';
 import { RealisticDeviceIcon } from './RealisticDeviceIcon';
 import { CABLE_DEFINITIONS } from '../utils/cableEngine';
 
@@ -524,12 +526,14 @@ export const CATEGORY_THEMES: Record<
 
 interface PaletteProps {
   onAddDevice: (type: DeviceType) => void;
+  onAddStickyNote?: (x?: number, y?: number, text?: string, color?: StickyNoteColor) => void;
   activeCableType?: CableType;
   onSelectCableType?: (type: CableType) => void;
 }
 
 export const Palette: React.FC<PaletteProps> = ({
   onAddDevice,
+  onAddStickyNote,
   activeCableType = 'auto',
   onSelectCableType,
 }) => {
@@ -606,6 +610,43 @@ export const Palette: React.FC<PaletteProps> = ({
             />
           </button>
         </div>
+
+        {/* Post-it Quick Creator Widget */}
+        {onAddStickyNote && (
+          <div className="pt-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 mb-1.5">
+              <div className="flex items-center gap-1.5 text-amber-300">
+                <StickyNoteIcon className="w-3.5 h-3.5 text-amber-400" />
+                <span>Nätverksdokumentation</span>
+              </div>
+              <span className="text-[9.5px] text-amber-400/90 font-mono font-semibold">Post-its</span>
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {(['yellow', 'cyan', 'emerald', 'rose', 'amber', 'purple', 'blue'] as StickyNoteColor[]).map((c) => {
+                const bgMap: Record<StickyNoteColor, string> = {
+                  yellow: 'bg-amber-300 text-amber-950 border-amber-400 hover:scale-110 shadow-amber-500/30',
+                  cyan: 'bg-cyan-500 text-slate-950 border-cyan-400 hover:scale-110 shadow-cyan-500/30',
+                  emerald: 'bg-emerald-500 text-slate-950 border-emerald-400 hover:scale-110 shadow-emerald-500/30',
+                  rose: 'bg-rose-500 text-white border-rose-400 hover:scale-110 shadow-rose-500/30',
+                  amber: 'bg-amber-500 text-slate-950 border-amber-400 hover:scale-110 shadow-amber-500/30',
+                  purple: 'bg-purple-500 text-white border-purple-400 hover:scale-110 shadow-purple-500/30',
+                  blue: 'bg-blue-500 text-white border-blue-400 hover:scale-110 shadow-blue-500/30',
+                };
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => onAddStickyNote(undefined, undefined, undefined, c)}
+                    title={`Placera ut en ${c} digital Post-it anteckningslapp på diagrammet`}
+                    className={`h-6 rounded-md border flex items-center justify-center font-black transition cursor-pointer shadow-sm ${bgMap[c]}`}
+                  >
+                    <Plus className="w-3 h-3 stroke-[3]" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Search & Category filter inside Devices tab */}
         {activeTab === 'devices' && (

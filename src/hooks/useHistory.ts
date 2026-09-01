@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
-import { Device, Link, NetworkContainer } from '../types';
+import { Device, Link, NetworkContainer, StickyNote } from '../types';
 
 export interface TopologyState {
   nodes: Device[];
   links: Link[];
   containers: NetworkContainer[];
+  stickyNotes?: StickyNote[];
 }
 
 interface HistoryState {
@@ -30,7 +31,8 @@ export function useHistory(initialState: TopologyState) {
     if (
       a.nodes.length !== b.nodes.length ||
       a.links.length !== b.links.length ||
-      a.containers.length !== b.containers.length
+      a.containers.length !== b.containers.length ||
+      (a.stickyNotes?.length || 0) !== (b.stickyNotes?.length || 0)
     ) {
       return false;
     }
@@ -130,6 +132,7 @@ export function useHistory(initialState: TopologyState) {
     nodes: state.present.nodes,
     links: state.present.links,
     containers: state.present.containers,
+    stickyNotes: state.present.stickyNotes || [],
     presentState: state.present,
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,

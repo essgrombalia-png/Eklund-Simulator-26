@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Upload, Copy, Check, X, Clock, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
-import { Device, Link, NetworkContainer } from '../types';
+import { Device, Link, NetworkContainer, StickyNote } from '../types';
 
 interface ExportImportModalProps {
   nodes: Device[];
   links: Link[];
   containers?: NetworkContainer[];
+  stickyNotes?: StickyNote[];
   lastAutoSavedTime?: string | null;
-  onImportTopology: (data: { nodes: Device[]; links: Link[]; containers?: NetworkContainer[] }) => void;
+  onImportTopology: (data: { nodes: Device[]; links: Link[]; containers?: NetworkContainer[]; stickyNotes?: StickyNote[] }) => void;
   onClose: () => void;
 }
 
@@ -15,11 +16,12 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   nodes,
   links,
   containers = [],
+  stickyNotes = [],
   lastAutoSavedTime,
   onImportTopology,
   onClose,
 }) => {
-  const currentJson = JSON.stringify({ nodes, links, containers }, null, 2);
+  const currentJson = JSON.stringify({ nodes, links, containers, stickyNotes }, null, 2);
   const [jsonText, setJsonText] = useState(currentJson);
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -27,6 +29,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     nodes: Device[];
     links: Link[];
     containers: NetworkContainer[];
+    stickyNotes?: StickyNote[];
     timestamp: string;
     formattedTime: string;
   } | null>(null);
@@ -61,6 +64,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         nodes: parsed.nodes,
         links: parsed.links,
         containers: Array.isArray(parsed.containers) ? parsed.containers : [],
+        stickyNotes: Array.isArray(parsed.stickyNotes) ? parsed.stickyNotes : [],
       });
       onClose();
     } catch (err: any) {
@@ -74,6 +78,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         nodes: backupData.nodes,
         links: backupData.links,
         containers: backupData.containers || [],
+        stickyNotes: backupData.stickyNotes || [],
       });
       onClose();
     }

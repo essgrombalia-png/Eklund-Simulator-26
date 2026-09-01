@@ -222,6 +222,29 @@ export interface NetworkContainer {
   collapsedY?: number;
 }
 
+export type StickyNoteColor =
+  | 'yellow'
+  | 'cyan'
+  | 'emerald'
+  | 'amber'
+  | 'rose'
+  | 'purple'
+  | 'blue';
+
+export interface StickyNote {
+  id: string;
+  title?: string;
+  text: string;
+  x: number;
+  y: number;
+  color: StickyNoteColor;
+  width?: number;
+  height?: number;
+  isPinned?: boolean;
+  author?: string;
+  updatedAt?: string;
+}
+
 export interface ScenarioPreset {
   id: string;
   title: string;
@@ -230,6 +253,7 @@ export interface ScenarioPreset {
   nodes: Device[];
   links: Link[];
   containers?: NetworkContainer[];
+  stickyNotes?: StickyNote[];
 }
 
 export type ScenarioDifficulty = 'easy' | 'medium' | 'hard' | 'expert';

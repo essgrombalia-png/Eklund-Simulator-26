@@ -35,6 +35,7 @@ import {
   Heart,
   Activity,
   Wand2,
+  StickyNote as StickyNoteIcon,
 } from 'lucide-react';
 import {
   Device,
@@ -46,6 +47,7 @@ import {
   ContainerColor,
   CapturedPacket,
   SimulatorThemeId,
+  StickyNote,
 } from '../types';
 import { detectNodeWarnings } from '../utils/networkEngine';
 import { CABLE_DEFINITIONS } from '../utils/cableEngine';
@@ -57,11 +59,13 @@ import {
 import { RealisticDeviceIcon } from './RealisticDeviceIcon';
 import { NodeTooltip } from './NodeTooltip';
 import { Minimap } from './Minimap';
+import { StickyNoteCard } from './StickyNoteCard';
 
 interface CanvasProps {
   nodes: Device[];
   links: Link[];
   containers?: NetworkContainer[];
+  stickyNotes?: StickyNote[];
   capturedPackets?: CapturedPacket[];
   selectedNodeId: string | null;
   selectedNodeIds?: string[];
@@ -84,6 +88,9 @@ interface CanvasProps {
   onOpenContainerModal?: (container?: NetworkContainer | null, initialNodeIds?: string[]) => void;
   onAddLink: (aId: string, bId: string) => void;
   onAddNodeAtPosition: (type: DeviceType, x: number, y: number) => void;
+  onAddStickyNote?: (x?: number, y?: number) => void;
+  onUpdateStickyNote?: (note: StickyNote) => void;
+  onDeleteStickyNote?: (id: string) => void;
   onOpenIpModal?: (node: Device) => void;
   onOpenLayoutOptimizer?: () => void;
   onQuickAutoLayout?: () => void;
@@ -242,6 +249,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   nodes,
   links,
   containers = [],
+  stickyNotes = [],
   capturedPackets = [],
   selectedNodeId,
   selectedNodeIds = [],
@@ -264,6 +272,9 @@ export const Canvas: React.FC<CanvasProps> = ({
   onOpenContainerModal,
   onAddLink,
   onAddNodeAtPosition,
+  onAddStickyNote,
+  onUpdateStickyNote,
+  onDeleteStickyNote,
   onOpenIpModal,
   onOpenLayoutOptimizer,
   onQuickAutoLayout,
@@ -313,6 +324,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  // Sticky Note Dragging State
+  const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+  const [noteDragOffset, setNoteDragOffset] = useState({ x: 0, y: 0 });
 
   // Container Dragging state
   const [draggingContainerId, setDraggingContainerId] = useState<string | null>(null);
@@ -487,6 +502,16 @@ export const Canvas: React.FC<CanvasProps> = ({
   const onDragEndRef = useRef(onDragEnd);
   onDragEndRef.current = onDragEnd;
 
+  // Sticky Notes Refs
+  const stickyNotesRef = useRef(stickyNotes);
+  stickyNotesRef.current = stickyNotes;
+  const draggingNoteIdRef = useRef<string | null>(null);
+  draggingNoteIdRef.current = draggingNoteId;
+  const noteDragOffsetRef = useRef(noteDragOffset);
+  noteDragOffsetRef.current = noteDragOffset;
+  const onUpdateStickyNoteRef = useRef(onUpdateStickyNote);
+  onUpdateStickyNoteRef.current = onUpdateStickyNote;
+
   // Global mousemove & mouseup listeners for ultra-smooth drag & drop / panning / cable connecting
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -498,6 +523,31 @@ export const Canvas: React.FC<CanvasProps> = ({
           x: e.clientX - panStartRef.current.x,
           y: e.clientY - panStartRef.current.y,
         });
+        return;
+      }
+
+      // Dragging a Sticky Note
+      if (draggingNoteIdRef.current) {
+        const rawX = (e.clientX - rect.left - panRef.current.x) / zoomRef.current - noteDragOffsetRef.current.x;
+        const rawY = (e.clientY - rect.top - panRef.current.y) / zoomRef.current - noteDragOffsetRef.current.y;
+
+        let finalX = Math.max(20, Math.min(CANVAS_WIDTH - 150, rawX));
+        let finalY = Math.max(20, Math.min(CANVAS_HEIGHT - 100, rawY));
+
+        if (snapToGridRef.current) {
+          const g = (gridSizeRef.current || 40) / 2;
+          finalX = Math.round(finalX / g) * g;
+          finalY = Math.round(finalY / g) * g;
+        }
+
+        const currentNote = stickyNotesRef.current.find((n) => n.id === draggingNoteIdRef.current);
+        if (currentNote && onUpdateStickyNoteRef.current) {
+          onUpdateStickyNoteRef.current({
+            ...currentNote,
+            x: finalX,
+            y: finalY,
+          });
+        }
         return;
       }
 
@@ -614,11 +664,12 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
 
     const handleGlobalMouseUp = (e: MouseEvent) => {
-      const wasDragging = draggingNodeIdRef.current || draggingContainerIdRef.current;
+      const wasDragging = draggingNodeIdRef.current || draggingContainerIdRef.current || draggingNoteIdRef.current;
 
       setIsPanning(false);
       setDraggingNodeId(null);
       setDraggingContainerId(null);
+      setDraggingNoteId(null);
       setContainerDragStart(null);
       setActiveGuidelines([]);
 
@@ -1763,20 +1814,31 @@ export const Canvas: React.FC<CanvasProps> = ({
           </div>
         )}
 
-        {/* Floating Canvas Top-Right Quick Layout Bar */}
-        {nodes.length > 0 && (onOpenLayoutOptimizer || onQuickAutoLayout) && (
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-slate-950/90 border border-cyan-500/30 p-1.5 rounded-2xl shadow-2xl backdrop-blur-md animate-fade-in">
-            {onQuickAutoLayout && (
-              <button
-                type="button"
-                onClick={onQuickAutoLayout}
-                title="1-Klick Automatisk D3 Layout-optimering (Trassla upp nätverk och linjera alla enheter)"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 transition cursor-pointer"
-              >
-                <Wand2 className="w-3.5 h-3.5 fill-slate-950" />
-                <span>⚡ Auto-Layout (1-Klick)</span>
-              </button>
-            )}
+        {/* Floating Canvas Top-Right Quick Layout & Note Bar */}
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-slate-950/90 border border-cyan-500/30 p-1.5 rounded-2xl shadow-2xl backdrop-blur-md animate-fade-in">
+          {onAddStickyNote && (
+            <button
+              type="button"
+              onClick={() => onAddStickyNote()}
+              title="Skapa en Digital Post-it på canvassen för att dokumentera nätverket"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-extrabold text-xs shadow-md shadow-amber-400/20 transition cursor-pointer"
+            >
+              <StickyNoteIcon className="w-3.5 h-3.5 fill-amber-950" />
+              <span>+ Ny Post-it</span>
+            </button>
+          )}
+
+          {onQuickAutoLayout && nodes.length > 0 && (
+            <button
+              type="button"
+              onClick={onQuickAutoLayout}
+              title="1-Klick Automatisk D3 Layout-optimering (Trassla upp nätverk och linjera alla enheter)"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 transition cursor-pointer"
+            >
+              <Wand2 className="w-3.5 h-3.5 fill-slate-950" />
+              <span>⚡ Auto-Layout</span>
+            </button>
+          )}
             {onOpenLayoutOptimizer && (
               <button
                 type="button"
@@ -1789,7 +1851,6 @@ export const Canvas: React.FC<CanvasProps> = ({
               </button>
             )}
           </div>
-        )}
 
         {/* Render Expanded Container Headers & Interactive Overlays */}
         {containers.map((c) => {
@@ -2031,6 +2092,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                   node={node}
                   nodes={nodes}
                   links={links}
+                  capturedPackets={capturedPackets}
                   hasInternet={hasInternet}
                   onOpenIpModal={onOpenIpModal}
                 />
@@ -2299,6 +2361,30 @@ export const Canvas: React.FC<CanvasProps> = ({
             </div>
           );
         })}
+
+        {/* Digital Post-its Layer */}
+        {stickyNotes.map((note) => (
+          <StickyNoteCard
+            key={note.id}
+            note={note}
+            zoom={zoom}
+            onUpdate={onUpdateStickyNote ? onUpdateStickyNote : () => {}}
+            onDelete={onDeleteStickyNote ? onDeleteStickyNote : () => {}}
+            onDragStart={(e, noteId) => {
+              e.stopPropagation();
+              if (!containerRef.current) return;
+              const rect = containerRef.current.getBoundingClientRect();
+              const mouseCanvasX = (e.clientX - rect.left - pan.x) / zoom;
+              const mouseCanvasY = (e.clientY - rect.top - pan.y) / zoom;
+              setDraggingNoteId(noteId);
+              setNoteDragOffset({
+                x: mouseCanvasX - note.x,
+                y: mouseCanvasY - note.y,
+              });
+              onDragStart?.();
+            }}
+          />
+        ))}
       </div>
 
       {/* Floating Multi-Selection Action Toolbar */}

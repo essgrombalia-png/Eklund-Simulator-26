@@ -34,6 +34,8 @@ import {
   ProblemScenario,
   CapturedPacket,
   NetworkContainer,
+  StickyNote,
+  StickyNoteColor,
   IncidentLog,
   AdvancedSettings,
   UserProfile,
@@ -123,11 +125,13 @@ export default function App() {
     nodes: [],
     links: [],
     containers: [],
+    stickyNotes: [],
   });
   const {
     nodes,
     links,
     containers,
+    stickyNotes = [],
     canUndo,
     canRedo,
     undo,
@@ -140,7 +144,7 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('eklund_current_user');
-    resetHistory({ nodes: [], links: [], containers: [] });
+    resetHistory({ nodes: [], links: [], containers: [], stickyNotes: [] });
     setCurrentScenarioId('custom');
     setCurrentUser(null);
   };
@@ -151,6 +155,7 @@ export default function App() {
       nodes?: Device[] | ((prev: Device[]) => Device[]);
       links?: Link[] | ((prev: Link[]) => Link[]);
       containers?: NetworkContainer[] | ((prev: NetworkContainer[]) => NetworkContainer[]);
+      stickyNotes?: StickyNote[] | ((prev: StickyNote[]) => StickyNote[]);
     },
     label?: string
   ) => {
@@ -163,8 +168,41 @@ export default function App() {
     const nextContainers = updater.containers
       ? (typeof updater.containers === 'function' ? updater.containers(containers) : updater.containers)
       : containers;
+    const nextStickyNotes = updater.stickyNotes
+      ? (typeof updater.stickyNotes === 'function' ? updater.stickyNotes(stickyNotes) : updater.stickyNotes)
+      : stickyNotes;
 
-    pushSnapshot({ nodes: nextNodes, links: nextLinks, containers: nextContainers }, label || 'Ändring');
+    pushSnapshot(
+      { nodes: nextNodes, links: nextLinks, containers: nextContainers, stickyNotes: nextStickyNotes },
+      label || 'Ändring'
+    );
+  };
+
+  // Sticky Note Handlers
+  const handleAddStickyNote = (x?: number, y?: number, text?: string, color?: StickyNoteColor) => {
+    const newNote: StickyNote = {
+      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: 'Dokumentation',
+      text: text || 'Klicka för att skriva nätverksdokumentation, IP-planering eller anteckningar...',
+      x: x ?? 320,
+      y: y ?? 220,
+      color: color || 'yellow',
+      width: 220,
+      height: 160,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    updateTopology({ stickyNotes: (prev) => [...prev, newNote] }, 'Lade till digital Post-it');
+  };
+
+  const handleUpdateStickyNote = (updatedNote: StickyNote) => {
+    updateTopology(
+      { stickyNotes: (prev) => prev.map((n) => (n.id === updatedNote.id ? updatedNote : n)) },
+      'Uppdaterade Post-it'
+    );
+  };
+
+  const handleDeleteStickyNote = (id: string) => {
+    updateTopology({ stickyNotes: (prev) => prev.filter((n) => n.id !== id) }, 'Tog bort Post-it');
   };
 
   // Backwards compatible state-setters for any other component calls
@@ -205,12 +243,13 @@ export default function App() {
   // Periodic Auto-Save every 30s
   useEffect(() => {
     const saveInterval = setInterval(() => {
-      if (nodes.length > 0 || links.length > 0 || containers.length > 0) {
+      if (nodes.length > 0 || links.length > 0 || containers.length > 0 || stickyNotes.length > 0) {
         try {
           const payload = {
             nodes,
             links,
             containers,
+            stickyNotes,
             timestamp: new Date().toISOString(),
             formattedTime: new Date().toLocaleTimeString([], {
               hour: '2-digit',
@@ -228,7 +267,7 @@ export default function App() {
     }, 30000);
 
     return () => clearInterval(saveInterval);
-  }, [nodes, links, containers]);
+  }, [nodes, links, containers, stickyNotes]);
 
   const handleRestoreAutoSave = () => {
     try {
@@ -240,6 +279,7 @@ export default function App() {
             nodes: parsed.nodes,
             links: Array.isArray(parsed.links) ? parsed.links : [],
             containers: Array.isArray(parsed.containers) ? parsed.containers : [],
+            stickyNotes: Array.isArray(parsed.stickyNotes) ? parsed.stickyNotes : [],
           });
           setPingLogs((prev) => [
             `✓ Återställde automatisk säkerhetskopia från ${parsed.formattedTime || 'tidigare session'}.`,
@@ -613,7 +653,7 @@ export default function App() {
 
   // Clear All
   const handleClearAll = () => {
-    updateTopology({ nodes: [], links: [], containers: [] }, 'Rensade ritytan');
+    updateTopology({ nodes: [], links: [], containers: [], stickyNotes: [] }, 'Rensade ritytan');
     setSelectedNodeId(null);
     setSelectedNodeIds([]);
     setSelectedLinkId(null);
@@ -629,6 +669,7 @@ export default function App() {
       nodes: preset.nodes,
       links: preset.links,
       containers: preset.containers || [],
+      stickyNotes: preset.stickyNotes || [],
     });
     setSelectedNodeId(null);
     setSelectedNodeIds([]);
@@ -1335,6 +1376,7 @@ export default function App() {
         {activeTab === 'canvas' && (
           <Palette
             onAddDevice={handleAddDevice}
+            onAddStickyNote={handleAddStickyNote}
             activeCableType={activeCableType}
             onSelectCableType={setActiveCableType}
           />
@@ -1363,9 +1405,13 @@ export default function App() {
               nodes={nodes}
               links={links}
               containers={containers}
+              stickyNotes={stickyNotes}
               capturedPackets={capturedPackets}
               currentThemeId={settings.themeId}
               isLightMode={activeTheme.isLight}
+              onAddStickyNote={handleAddStickyNote}
+              onUpdateStickyNote={handleUpdateStickyNote}
+              onDeleteStickyNote={handleDeleteStickyNote}
               selectedNodeId={selectedNodeId}
               selectedNodeIds={selectedNodeIds}
               selectedLinkId={selectedLinkId}
@@ -1684,11 +1730,15 @@ export default function App() {
           nodes={nodes}
           links={links}
           containers={containers}
+          stickyNotes={stickyNotes}
           lastAutoSavedTime={lastAutoSavedTime}
-          onImportTopology={({ nodes: newNodes, links: newLinks, containers: newContainers }) => {
-            setNodes(newNodes);
-            setLinks(newLinks);
-            setContainers(newContainers || []);
+          onImportTopology={({ nodes: newNodes, links: newLinks, containers: newContainers, stickyNotes: newStickyNotes }) => {
+            resetHistory({
+              nodes: newNodes,
+              links: newLinks,
+              containers: newContainers || [],
+              stickyNotes: newStickyNotes || [],
+            });
             setSelectedNodeId(null);
             setSelectedNodeIds([]);
             setSelectedLinkId(null);
