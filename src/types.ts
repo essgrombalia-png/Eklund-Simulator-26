@@ -111,6 +111,7 @@ export interface Device {
     dns?: boolean;
     sql?: boolean;
     vpn?: boolean;
+    mail?: boolean;
   };
   hackerAttackActive?: boolean;
   hackerAttackIntensity?: 'low-noise' | 'aggressive' | 'brute-force-flood' | 'apocalyptic';
