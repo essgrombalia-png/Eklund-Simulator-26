@@ -34,6 +34,7 @@ import {
   ShieldAlert,
   Heart,
   Activity,
+  Wand2,
 } from 'lucide-react';
 import {
   Device,
@@ -83,6 +84,8 @@ interface CanvasProps {
   onAddLink: (aId: string, bId: string) => void;
   onAddNodeAtPosition: (type: DeviceType, x: number, y: number) => void;
   onOpenIpModal?: (node: Device) => void;
+  onOpenLayoutOptimizer?: () => void;
+  onQuickAutoLayout?: () => void;
   onOpenAutoRepair?: () => void;
   onAutoRepairNode?: (nodeId: string) => void;
   activeCableType?: CableType;
@@ -259,6 +262,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   onAddLink,
   onAddNodeAtPosition,
   onOpenIpModal,
+  onOpenLayoutOptimizer,
+  onQuickAutoLayout,
   onOpenAutoRepair,
   onAutoRepairNode,
   activeCableType = 'auto',
@@ -1728,6 +1733,34 @@ export const Canvas: React.FC<CanvasProps> = ({
             >
               Visa guide
             </button>
+          </div>
+        )}
+
+        {/* Floating Canvas Top-Right Quick Layout Bar */}
+        {nodes.length > 0 && (onOpenLayoutOptimizer || onQuickAutoLayout) && (
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-slate-950/90 border border-cyan-500/30 p-1.5 rounded-2xl shadow-2xl backdrop-blur-md animate-fade-in">
+            {onQuickAutoLayout && (
+              <button
+                type="button"
+                onClick={onQuickAutoLayout}
+                title="1-Klick Automatisk D3 Layout-optimering (Trassla upp nätverk och linjera alla enheter)"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 transition cursor-pointer"
+              >
+                <Wand2 className="w-3.5 h-3.5 fill-slate-950" />
+                <span>⚡ Auto-Layout (1-Klick)</span>
+              </button>
+            )}
+            {onOpenLayoutOptimizer && (
+              <button
+                type="button"
+                onClick={onOpenLayoutOptimizer}
+                title="Öppna D3 Layout-inställningar (Hierarkisk, Kraftfält, Ring, Rutnät)"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-800 text-xs font-semibold transition cursor-pointer"
+              >
+                <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Anpassa</span>
+              </button>
+            )}
           </div>
         )}
 

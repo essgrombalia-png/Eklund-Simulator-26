@@ -20,19 +20,25 @@ import {
   Redo2,
   Flame,
   ShieldCheck,
+  Trophy,
+  Wand2,
 } from 'lucide-react';
 import { ScenarioPreset } from '../types';
 import { SCENARIOS } from '../data/scenarios';
+import { PROBLEM_SCENARIOS } from '../data/problemScenarios';
 import { EklundLogo } from './EklundLogo';
 
 interface TopbarProps {
   currentScenarioId: string;
   onSelectScenario: (preset: ScenarioPreset) => void;
+  onOpenScenarioModal?: () => void;
+  completedScenarioCount?: number;
   onOpenTerminal: () => void;
   onOpenPacketInspector: () => void;
   onOpenTrafficGen: () => void;
   onOpenSubnetCalc: () => void;
   onOpenExportImport: () => void;
+  onOpenLayoutOptimizer?: () => void;
   onOpenAutoRepair?: () => void;
   onOpenCyberAwareness?: () => void;
   onOpenAntivirus?: () => void;
@@ -58,11 +64,14 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({
   currentScenarioId,
   onSelectScenario,
+  onOpenScenarioModal,
+  completedScenarioCount = 0,
   onOpenTerminal,
   onOpenPacketInspector,
   onOpenTrafficGen,
   onOpenSubnetCalc,
   onOpenExportImport,
+  onOpenLayoutOptimizer,
   onOpenAutoRepair,
   onOpenCyberAwareness,
   onOpenAntivirus,
@@ -113,8 +122,22 @@ export const Topbar: React.FC<TopbarProps> = ({
         </p>
       </div>
 
-      {/* Preset Selector */}
+      {/* Preset Selector & Scenarios Button */}
       <div className="flex items-center gap-2">
+        {onOpenScenarioModal && (
+          <button
+            onClick={onOpenScenarioModal}
+            title="Öppna Nätverks-Scenarier & Utmaningar (10+ Felsökningsuppdrag)"
+            className="bg-gradient-to-r from-amber-500/20 via-cyan-500/20 to-teal-500/20 hover:from-amber-500/30 hover:to-teal-500/30 text-slate-100 border border-amber-500/40 hover:border-amber-400 text-xs rounded-lg px-3 py-1.5 font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>Scenarier</span>
+            <span className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full border border-amber-500/30 font-mono">
+              {completedScenarioCount}/{PROBLEM_SCENARIOS.length}
+            </span>
+          </button>
+        )}
+
         <label className="text-xs font-medium text-slate-400 hidden lg:inline-block">
           Mönster:
         </label>
@@ -261,6 +284,18 @@ export const Topbar: React.FC<TopbarProps> = ({
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
             <span>Antivirus System</span>
+          </button>
+        )}
+
+        {/* D3 Layout Optimizer Button */}
+        {onOpenLayoutOptimizer && (
+          <button
+            onClick={onOpenLayoutOptimizer}
+            title="Öppna D3 Layout-optimerare (Snygga till nod-positioner med 1 klick)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition bg-gradient-to-r from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30 text-teal-300 border border-teal-500/40 hover:border-teal-400 shadow-sm shadow-teal-950/40 cursor-pointer"
+          >
+            <Wand2 className="w-3.5 h-3.5 text-teal-400 animate-spin-slow" />
+            <span>Layout-optimerare</span>
           </button>
         )}
 

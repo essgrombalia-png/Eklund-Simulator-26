@@ -227,6 +227,37 @@ export interface ScenarioPreset {
   containers?: NetworkContainer[];
 }
 
+export type ScenarioDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
+
+export interface ScenarioTask {
+  id: string;
+  description: string;
+  hint: string;
+}
+
+export interface ProblemScenarioValidationResult {
+  isSolved: boolean;
+  taskStatuses: Record<string, boolean>;
+  message: string;
+  details?: string[];
+}
+
+export interface ProblemScenario {
+  id: string;
+  title: string;
+  category: 'Felsökning' | 'Säkerhet' | 'Routing' | 'DHCP & IP' | 'DNS & Web' | 'VLAN & Isolation';
+  difficulty: ScenarioDifficulty;
+  estimatedTime: string;
+  iconName: string;
+  summary: string;
+  problemDescription: string;
+  initialNodes: Device[];
+  initialLinks: Link[];
+  initialContainers?: NetworkContainer[];
+  tasks: ScenarioTask[];
+  validateSolution: (nodes: Device[], links: Link[]) => ProblemScenarioValidationResult;
+}
+
 export interface TestResult {
   success: boolean;
   pathNodes: string[];

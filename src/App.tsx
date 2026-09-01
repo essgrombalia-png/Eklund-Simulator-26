@@ -14,15 +14,20 @@ import { AutoRepairModal } from './components/AutoRepairModal';
 import { CyberAwarenessModal } from './components/CyberAwarenessModal';
 import { AntivirusModal } from './components/AntivirusModal';
 import { ContainerModal } from './components/ContainerModal';
+import { LayoutOptimizerModal } from './components/LayoutOptimizerModal';
+import { ScenarioModal } from './components/ScenarioModal';
+import { ScenarioBanner } from './components/ScenarioBanner';
 import { LandingPage } from './components/LandingPage';
 import { MatrixRain } from './components/MatrixRain';
 import { SCENARIOS } from './data/scenarios';
+import { PROBLEM_SCENARIOS } from './data/problemScenarios';
 import {
   Device,
   Link,
   DeviceType,
   CableType,
   ScenarioPreset,
+  ProblemScenario,
   CapturedPacket,
   NetworkContainer,
 } from './types';
@@ -49,6 +54,7 @@ import {
   ATTACK_PROFILES,
   isHackerDevice,
 } from './utils/hackerEngine';
+import { optimizeNetworkLayout } from './utils/d3Layout';
 import { Play, ArrowRight, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles, Zap, Wrench, Skull, ShieldAlert } from 'lucide-react';
 import { useHistory } from './hooks/useHistory';
 import { useRef } from 'react';
@@ -234,11 +240,91 @@ export default function App() {
   const [showAutoRepairModal, setShowAutoRepairModal] = useState(false);
   const [showCyberAwarenessModal, setShowCyberAwarenessModal] = useState(false);
   const [showAntivirusModal, setShowAntivirusModal] = useState(false);
+  const [showLayoutOptimizerModal, setShowLayoutOptimizerModal] = useState(false);
   const [showVisualDebugger, setShowVisualDebugger] = useState(false);
+
+  // Layout Optimization Handler
+  const handleApplyLayout = (updatedNodes: Device[], historyLabel: string = 'D3 Layout-optimering') => {
+    updateTopology({ nodes: updatedNodes }, historyLabel);
+    setPingLogs((prev) => [
+      `✨ D3 Layout-optimering slutförd: ${updatedNodes.length} noder har sorterats snyggt.`,
+      ...prev,
+    ]);
+  };
+
+  const handleQuickAutoLayout = () => {
+    if (nodes.length === 0) return;
+    const canvasWidth = window.innerWidth > 1400 ? 1400 : 1200;
+    const canvasHeight = window.innerHeight > 900 ? 900 : 750;
+
+    const optimized = optimizeNetworkLayout(nodes, links, {
+      algorithm: 'hierarchical',
+      nodeSpacing: 140,
+      ticks: 300,
+      canvasWidth,
+      canvasHeight,
+      padding: 90,
+    });
+
+    handleApplyLayout(optimized, '⚡ 1-Klick D3 Layout-optimering');
+  };
   const [ipConfigModalNode, setIpConfigModalNode] = useState<Device | null>(null);
   const [showContainerModal, setShowContainerModal] = useState(false);
   const [editingContainer, setEditingContainer] = useState<NetworkContainer | null>(null);
   const [containerModalSelectedNodeIds, setContainerModalSelectedNodeIds] = useState<string[]>([]);
+  const [showScenarioModal, setShowScenarioModal] = useState(false);
+  const [activeProblemScenario, setActiveProblemScenario] = useState<ProblemScenario | null>(null);
+  const [completedScenarioIds, setCompletedScenarioIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('eklund_completed_scenarios');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleSelectProblemScenario = (sc: ProblemScenario) => {
+    setActiveProblemScenario(sc);
+    setCurrentScenarioId(sc.id);
+    resetHistory({
+      nodes: JSON.parse(JSON.stringify(sc.initialNodes)),
+      links: JSON.parse(JSON.stringify(sc.initialLinks)),
+      containers: JSON.parse(JSON.stringify(sc.initialContainers || [])),
+    });
+    setPingLogs((prev) => [
+      `🎯 Startade scenario "${sc.title}" (${sc.category} - ${sc.difficulty}).`,
+      ...prev,
+    ]);
+  };
+
+  const handleResetProblemScenario = () => {
+    if (activeProblemScenario) {
+      resetHistory({
+        nodes: JSON.parse(JSON.stringify(activeProblemScenario.initialNodes)),
+        links: JSON.parse(JSON.stringify(activeProblemScenario.initialLinks)),
+        containers: JSON.parse(JSON.stringify(activeProblemScenario.initialContainers || [])),
+      });
+      setPingLogs((prev) => [
+        `🔄 Återställde scenario "${activeProblemScenario.title}" till ursprungsläget.`,
+        ...prev,
+      ]);
+    }
+  };
+
+  const handleExitProblemScenario = () => {
+    setActiveProblemScenario(null);
+    setCurrentScenarioId('custom');
+    setPingLogs((prev) => [`Lämnade scenarioläget.`, ...prev]);
+  };
+
+  const handleScenarioCompleted = (scenarioId: string) => {
+    setCompletedScenarioIds((prev) => {
+      if (prev.includes(scenarioId)) return prev;
+      const next = [...prev, scenarioId];
+      localStorage.setItem('eklund_completed_scenarios', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Connection Test Ping State
   const [testFromId, setTestFromId] = useState<string>('');
@@ -1094,11 +1180,14 @@ export default function App() {
       <Topbar
         currentScenarioId={currentScenarioId}
         onSelectScenario={handleSelectScenario}
+        onOpenScenarioModal={() => setShowScenarioModal(true)}
+        completedScenarioCount={completedScenarioIds.length}
         onOpenTerminal={() => setActiveTab('terminal')}
         onOpenPacketInspector={() => setActiveTab('packets')}
         onOpenTrafficGen={() => setShowTrafficGen(true)}
         onOpenSubnetCalc={() => setShowSubnetCalc(true)}
         onOpenExportImport={() => setShowExportImport(true)}
+        onOpenLayoutOptimizer={() => setShowLayoutOptimizerModal(true)}
         onOpenAutoRepair={() => setShowAutoRepairModal(true)}
         onOpenCyberAwareness={() => setShowCyberAwarenessModal(true)}
         onOpenAntivirus={() => setShowAntivirusModal(true)}
@@ -1136,7 +1225,18 @@ export default function App() {
         )}
 
         {/* Center Viewport */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+          {activeProblemScenario && activeTab === 'canvas' && (
+            <ScenarioBanner
+              scenario={activeProblemScenario}
+              nodes={nodes}
+              links={links}
+              onExit={handleExitProblemScenario}
+              onReset={handleResetProblemScenario}
+              onScenarioCompleted={handleScenarioCompleted}
+            />
+          )}
+
           {activeTab === 'canvas' && (
             <Canvas
               nodes={nodes}
@@ -1188,6 +1288,8 @@ export default function App() {
               onAddLink={handleAddLink}
               onAddNodeAtPosition={handleAddNodeAtPosition}
               onOpenIpModal={(node) => setIpConfigModalNode(node)}
+              onOpenLayoutOptimizer={() => setShowLayoutOptimizerModal(true)}
+              onQuickAutoLayout={handleQuickAutoLayout}
               onOpenAutoRepair={() => setShowAutoRepairModal(true)}
               onAutoRepairNode={handleRepairNode}
               activeCableType={activeCableType}
@@ -1478,6 +1580,24 @@ export default function App() {
           onDeleteContainer={handleDeleteContainer}
         />
       )}
+
+      {/* D3 Layout Optimizer Modal */}
+      <LayoutOptimizerModal
+        isOpen={showLayoutOptimizerModal}
+        onClose={() => setShowLayoutOptimizerModal(false)}
+        nodes={nodes}
+        links={links}
+        onApplyLayout={handleApplyLayout}
+      />
+
+      {/* Problem Scenarios & Challenges Modal */}
+      <ScenarioModal
+        isOpen={showScenarioModal}
+        onClose={() => setShowScenarioModal(false)}
+        onSelectScenario={handleSelectProblemScenario}
+        completedScenarioIds={completedScenarioIds}
+        activeScenarioId={activeProblemScenario?.id}
+      />
     </div>
   );
 }
