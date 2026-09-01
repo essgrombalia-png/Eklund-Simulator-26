@@ -1245,6 +1245,156 @@ export const RealisticDeviceIcon: React.FC<RealisticDeviceIconProps> = ({
         </svg>
       );
 
+    case 'waf':
+      return (
+        <svg viewBox="0 0 48 48" fill="none" className={`${dimensions} ${className}`}>
+          {svgStyle}
+          <defs>
+            <linearGradient id="waf-case" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#083344" />
+              <stop offset="50%" stopColor="#155e75" />
+              <stop offset="100%" stopColor="#022c22" />
+            </linearGradient>
+            <filter id="waf-glow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#06b6d4" floodOpacity="0.8"/>
+            </filter>
+          </defs>
+          {/* WAF Chassis */}
+          <rect x="4" y="9" width="40" height="30" rx="4" fill="url(#waf-case)" stroke="#06b6d4" strokeWidth="1.8" />
+          {/* Central L7 App Shield */}
+          <path d="M 24 14 L 33 18 V 26 C 33 31 24 35 24 35 C 24 35 15 31 15 26 V 18 Z" fill="#0e7490" stroke="#22d3ee" strokeWidth="1.4" filter="url(#waf-glow)" />
+          <text x="24" y="26.5" fill="#ffffff" fontSize="4.5" fontWeight="black" fontFamily="monospace" textAnchor="middle">WAF</text>
+          {/* HTTP Filtering Beams */}
+          <line x1="8" y1="24" x2="14" y2="24" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="1,1" />
+          <line x1="34" y1="24" x2="40" y2="24" stroke="#10b981" strokeWidth="1.5" />
+          {/* Indicators */}
+          <circle cx="8" cy="14" r="1.2" fill="#22c55e" className="led-green" />
+          <circle cx="12" cy="14" r="1.2" fill="#06b6d4" className="led-cyan" />
+          <circle cx="36" cy="14" r="1.2" fill="#10b981" className="led-green-fast" />
+          <circle cx="40" cy="14" r="1.2" fill="#06b6d4" />
+        </svg>
+      );
+
+    case 'honeypot':
+      return (
+        <svg viewBox="0 0 48 48" fill="none" className={`${dimensions} ${className}`}>
+          {svgStyle}
+          <defs>
+            <linearGradient id="honey-case" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#451a03" />
+              <stop offset="50%" stopColor="#78350f" />
+              <stop offset="100%" stopColor="#1c1917" />
+            </linearGradient>
+            <filter id="honey-glow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#f59e0b" floodOpacity="0.8"/>
+            </filter>
+          </defs>
+          <rect x="4" y="9" width="40" height="30" rx="4" fill="url(#honey-case)" stroke="#f59e0b" strokeWidth="1.8" />
+          {/* Honeycomb Decoy Trap Grid */}
+          <path d="M 24 15 L 29 18 V 24 L 24 27 L 19 24 V 18 Z" fill="#b45309" stroke="#fbbf24" strokeWidth="1.2" filter="url(#honey-glow)" />
+          <path d="M 15 20 L 19 22.5 V 28 L 15 30.5 L 11 28 V 22.5 Z" fill="#92400e" stroke="#d97706" strokeWidth="0.9" />
+          <path d="M 33 20 L 37 22.5 V 28 L 33 30.5 L 29 28 V 22.5 Z" fill="#92400e" stroke="#d97706" strokeWidth="0.9" />
+          {/* Alert Sensor & Decoy Beacon */}
+          <circle cx="24" cy="21" r="2" fill="#ef4444" className="led-red" />
+          <text x="24" y="34.5" fill="#fbbf24" fontSize="3.8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">DECOY</text>
+          <circle cx="8" cy="14" r="1.2" fill="#f59e0b" className="led-amber" />
+          <circle cx="40" cy="14" r="1.2" fill="#ef4444" className="led-red" />
+        </svg>
+      );
+
+    case 'siem_soc':
+      return (
+        <svg viewBox="0 0 48 48" fill="none" className={`${dimensions} ${className}`}>
+          {svgStyle}
+          <defs>
+            <linearGradient id="siem-case" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1e1b4b" />
+              <stop offset="50%" stopColor="#312e81" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+            <filter id="siem-glow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#818cf8" floodOpacity="0.8"/>
+            </filter>
+          </defs>
+          <rect x="4" y="8" width="40" height="32" rx="4" fill="url(#siem-case)" stroke="#818cf8" strokeWidth="1.8" />
+          {/* SOC Multi-Telemetry Monitor Screens */}
+          <rect x="8" y="13" width="14" height="10" rx="1.5" fill="#030712" stroke="#6366f1" strokeWidth="1" />
+          <path d="M 10 20 L 13 16 L 16 19 L 20 15" stroke="#38bdf8" strokeWidth="1" fill="none" />
+          
+          <rect x="26" y="13" width="14" height="10" rx="1.5" fill="#030712" stroke="#6366f1" strokeWidth="1" />
+          <circle cx="33" cy="18" r="3.5" stroke="#a855f7" strokeWidth="0.8" fill="none" />
+          <circle cx="33" cy="18" r="1" fill="#ec4899" className="led-cyan" />
+
+          {/* AI Neural Correlation Node */}
+          <line x1="15" y1="28" x2="33" y2="28" stroke="#818cf8" strokeWidth="1.2" strokeDasharray="2,2" />
+          <circle cx="15" cy="28" r="1.8" fill="#4f46e5" />
+          <circle cx="24" cy="28" r="2.2" fill="#c084fc" filter="url(#siem-glow)" />
+          <circle cx="33" cy="28" r="1.8" fill="#4f46e5" />
+          <text x="24" y="36.5" fill="#c7d2fe" fontSize="3.8" fontWeight="black" fontFamily="monospace" textAnchor="middle">SOC SIEM</text>
+        </svg>
+      );
+
+    case 'ddos_scrubber':
+      return (
+        <svg viewBox="0 0 48 48" fill="none" className={`${dimensions} ${className}`}>
+          {svgStyle}
+          <defs>
+            <linearGradient id="scrub-case" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1e293b" />
+              <stop offset="50%" stopColor="#0f172a" />
+              <stop offset="100%" stopColor="#020617" />
+            </linearGradient>
+            <filter id="scrub-glow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#38bdf8" floodOpacity="0.8"/>
+            </filter>
+          </defs>
+          <rect x="4" y="9" width="40" height="30" rx="4" fill="url(#scrub-case)" stroke="#38bdf8" strokeWidth="1.8" />
+          {/* Carrier-Grade Multi-Core Scrubbing Matrix */}
+          <rect x="8" y="14" width="32" height="14" rx="2" fill="#020617" stroke="#0284c7" strokeWidth="1" />
+          {/* Ingress Volumetric Attack dropping into Clean Egress Stream */}
+          <path d="M 12 17 L 17 21 L 12 25" stroke="#f43f5e" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="20" y1="16" x2="20" y2="26" stroke="#e0f2fe" strokeWidth="1.2" strokeDasharray="1,1" />
+          <path d="M 23 21 H 36 M 33 17 L 37 21 L 33 25" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" filter="url(#scrub-glow)" />
+          {/* Rate-Limiting Pulse Indicators */}
+          <text x="24" y="35" fill="#38bdf8" fontSize="3.8" fontWeight="black" fontFamily="monospace" textAnchor="middle">400G SCRUB</text>
+          <circle cx="8" cy="11.5" r="1" fill="#38bdf8" className="led-cyan" />
+          <circle cx="40" cy="11.5" r="1" fill="#10b981" className="led-green" />
+        </svg>
+      );
+
+    case 'hsm_vault':
+      return (
+        <svg viewBox="0 0 48 48" fill="none" className={`${dimensions} ${className}`}>
+          {svgStyle}
+          <defs>
+            <linearGradient id="hsm-case" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1e293b" />
+              <stop offset="50%" stopColor="#334155" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+            <linearGradient id="hsm-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fbbf24" />
+              <stop offset="100%" stopColor="#d97706" />
+            </linearGradient>
+            <filter id="hsm-glow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#fbbf24" floodOpacity="0.8"/>
+            </filter>
+          </defs>
+          {/* Armored Chassis */}
+          <rect x="5" y="8" width="38" height="32" rx="3" fill="url(#hsm-case)" stroke="#e2e8f0" strokeWidth="1.8" />
+          {/* Cryptographic Secure Enclave Gold Module */}
+          <rect x="14" y="14" width="20" height="18" rx="2" fill="url(#hsm-gold)" stroke="#ffffff" strokeWidth="1" filter="url(#hsm-glow)" />
+          {/* Key & Lock Emblem */}
+          <circle cx="24" cy="21" r="3" fill="#1e293b" stroke="#ffffff" strokeWidth="1" />
+          <path d="M 24 23 V 28 M 22 28 H 26" stroke="#1e293b" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Tamper Sensors & Zeroize Pins */}
+          <circle cx="9" cy="14" r="1.2" fill="#22c55e" className="led-green" />
+          <circle cx="9" cy="20" r="1.2" fill="#fbbf24" className="led-amber" />
+          <circle cx="9" cy="26" r="1.2" fill="#38bdf8" className="led-cyan" />
+          <text x="24" y="37" fill="#e2e8f0" fontSize="3.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">FIPS-140 HSM</text>
+        </svg>
+      );
+
     default:
       return (
         <svg viewBox="0 0 48 48" fill="none" className={`${dimensions} ${className}`}>

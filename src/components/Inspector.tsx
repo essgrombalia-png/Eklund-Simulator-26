@@ -1888,13 +1888,28 @@ export const Inspector: React.FC<InspectorProps> = ({
               );
             })()}
 
-            {/* Firewall Rules Editor */}
-            {(selectedNode.type === 'firewall' || selectedNode.type === 'router') && (
+            {/* Firewall & Defense Rules Editor */}
+            {(selectedNode.type === 'firewall' ||
+              selectedNode.type === 'router' ||
+              selectedNode.type === 'waf' ||
+              selectedNode.type === 'ids_ips' ||
+              selectedNode.type === 'ddos_scrubber' ||
+              selectedNode.type === 'siem_soc') && (
               <div className="space-y-3 pt-2 border-t border-slate-800">
                 <div className="font-semibold text-rose-400 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Shield className="w-4 h-4" />
-                    <span>Brandväggsregler (NGFW)</span>
+                    <span>
+                      {selectedNode.type === 'waf'
+                        ? 'WAF Säkerhetsregler (L7)'
+                        : selectedNode.type === 'ddos_scrubber'
+                        ? 'Anti-DDoS Filterregler'
+                        : selectedNode.type === 'ids_ips'
+                        ? 'IDS/IPS Inspektionsregler'
+                        : selectedNode.type === 'siem_soc'
+                        ? 'SIEM Korrelations- & Larmregler'
+                        : 'Brandväggsregler (NGFW)'}
+                    </span>
                   </span>
                   <span className="text-[10px] text-slate-500 font-mono">
                     {(selectedNode.firewallRules || []).length} regler

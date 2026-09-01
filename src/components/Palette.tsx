@@ -95,6 +95,46 @@ const PALETTE_ITEMS: PaletteItem[] = [
     specs: 'Signatur & Avvikelse-analys',
   },
   {
+    type: 'waf',
+    label: 'WAF (Web App Firewall)',
+    category: 'Säkerhet & Brandvägg',
+    description: 'Skydd mot SQLi, XSS, OWASP Top-10 & bot-trafik',
+    badge: 'WAF-L7',
+    specs: 'Layer 7 HTTP/HTTPS Shield',
+  },
+  {
+    type: 'honeypot',
+    label: 'Decoy Honeypot (Fälla)',
+    category: 'Säkerhet & Brandvägg',
+    description: 'Deception trap som lurar & fångar angripare',
+    badge: 'DECOY',
+    specs: 'High-Interaction Lure Trap',
+  },
+  {
+    type: 'ddos_scrubber',
+    label: 'Anti-DDoS Scrubbing Node',
+    category: 'Säkerhet & Brandvägg',
+    description: '400 Gbps BGP Volumetric Flood Mitigation',
+    badge: 'SCRUB',
+    specs: 'SYN/UDP Rate-Limiting Engine',
+  },
+  {
+    type: 'siem_soc',
+    label: 'SOC SIEM & Threat Hunter',
+    category: 'Säkerhet & Brandvägg',
+    description: 'Central logginsamling, AI-analys & larm',
+    badge: 'SIEM',
+    specs: 'MITRE ATT&CK Correlation Hub',
+  },
+  {
+    type: 'hsm_vault',
+    label: 'Hardware Security Module (HSM)',
+    category: 'Säkerhet & Brandvägg',
+    description: 'FIPS 140-3 hårdvarukryptering & TLS Key Vault',
+    badge: 'HSM',
+    specs: 'Tamper-Proof Cryptographic Enclave',
+  },
+  {
     type: 'server_vpn',
     label: 'VPN Gateway',
     category: 'Säkerhet & Brandvägg',
@@ -349,6 +389,139 @@ const CABLE_KEYS: CableType[] = [
   'console',
 ];
 
+export const CATEGORY_THEMES: Record<
+  string,
+  {
+    name: string;
+    shortName: string;
+    dotColor: string;
+    textColor: string;
+    textHover: string;
+    chipActive: string;
+    chipInactive: string;
+    iconBg: string;
+    iconBorder: string;
+    cardBorder: string;
+    cardHoverBorder: string;
+    cardHoverGlow: string;
+    badgeStyle: string;
+    specColor: string;
+  }
+> = {
+  'Gateway & Rutt': {
+    name: 'Gateway & Rutt',
+    shortName: 'Gateway',
+    dotColor: 'bg-sky-400',
+    textColor: 'text-sky-400',
+    textHover: 'group-hover:text-sky-300',
+    chipActive: 'bg-sky-500 text-slate-950 font-bold shadow-md shadow-sky-500/30',
+    chipInactive: 'bg-sky-950/40 text-sky-300 hover:text-white border-sky-800/60 hover:border-sky-500/50',
+    iconBg: 'bg-sky-950/60',
+    iconBorder: 'border-sky-800/60 group-hover:border-sky-400',
+    cardBorder: 'border-slate-800/90',
+    cardHoverBorder: 'hover:border-sky-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(14,165,233,0.15)]',
+    badgeStyle: 'bg-sky-500/15 text-sky-300 border-sky-500/40',
+    specColor: 'text-sky-400/90',
+  },
+  'Säkerhet & Brandvägg': {
+    name: 'Säkerhet & Brandvägg',
+    shortName: 'Säkerhet',
+    dotColor: 'bg-indigo-400',
+    textColor: 'text-indigo-400',
+    textHover: 'group-hover:text-indigo-300',
+    chipActive: 'bg-indigo-500 text-white font-bold shadow-md shadow-indigo-500/30',
+    chipInactive: 'bg-indigo-950/40 text-indigo-300 hover:text-white border-indigo-800/60 hover:border-indigo-500/50',
+    iconBg: 'bg-indigo-950/60',
+    iconBorder: 'border-indigo-800/60 group-hover:border-indigo-400',
+    cardBorder: 'border-slate-800/90',
+    cardHoverBorder: 'hover:border-indigo-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(99,102,241,0.15)]',
+    badgeStyle: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40',
+    specColor: 'text-indigo-400/90',
+  },
+  'Switchar & Access': {
+    name: 'Switchar & Access',
+    shortName: 'Switchar',
+    dotColor: 'bg-emerald-400',
+    textColor: 'text-emerald-400',
+    textHover: 'group-hover:text-emerald-300',
+    chipActive: 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/30',
+    chipInactive: 'bg-emerald-950/40 text-emerald-300 hover:text-white border-emerald-800/60 hover:border-emerald-500/50',
+    iconBg: 'bg-emerald-950/60',
+    iconBorder: 'border-emerald-800/60 group-hover:border-emerald-400',
+    cardBorder: 'border-slate-800/90',
+    cardHoverBorder: 'hover:border-emerald-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(16,185,129,0.15)]',
+    badgeStyle: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
+    specColor: 'text-emerald-400/90',
+  },
+  'Servrar & Lagring': {
+    name: 'Servrar & Lagring',
+    shortName: 'Servrar',
+    dotColor: 'bg-amber-400',
+    textColor: 'text-amber-400',
+    textHover: 'group-hover:text-amber-300',
+    chipActive: 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30',
+    chipInactive: 'bg-amber-950/40 text-amber-300 hover:text-white border-amber-800/60 hover:border-amber-500/50',
+    iconBg: 'bg-amber-950/60',
+    iconBorder: 'border-amber-800/60 group-hover:border-amber-400',
+    cardBorder: 'border-slate-800/90',
+    cardHoverBorder: 'hover:border-amber-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(245,158,11,0.15)]',
+    badgeStyle: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
+    specColor: 'text-amber-400/90',
+  },
+  'Klienter & Arbetsstationer': {
+    name: 'Klienter & Arbetsstationer',
+    shortName: 'Klienter',
+    dotColor: 'bg-purple-400',
+    textColor: 'text-purple-400',
+    textHover: 'group-hover:text-purple-300',
+    chipActive: 'bg-purple-500 text-white font-bold shadow-md shadow-purple-500/30',
+    chipInactive: 'bg-purple-950/40 text-purple-300 hover:text-white border-purple-800/60 hover:border-purple-500/50',
+    iconBg: 'bg-purple-950/60',
+    iconBorder: 'border-purple-800/60 group-hover:border-purple-400',
+    cardBorder: 'border-slate-800/90',
+    cardHoverBorder: 'hover:border-purple-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(168,85,247,0.15)]',
+    badgeStyle: 'bg-purple-500/15 text-purple-300 border-purple-500/40',
+    specColor: 'text-purple-400/90',
+  },
+  'The Internet of Things (IoT)': {
+    name: 'The Internet of Things (IoT)',
+    shortName: 'IoT',
+    dotColor: 'bg-lime-400',
+    textColor: 'text-lime-400',
+    textHover: 'group-hover:text-lime-300',
+    chipActive: 'bg-lime-500 text-slate-950 font-bold shadow-md shadow-lime-500/30',
+    chipInactive: 'bg-lime-950/40 text-lime-300 hover:text-white border-lime-800/60 hover:border-lime-500/50',
+    iconBg: 'bg-lime-950/60',
+    iconBorder: 'border-lime-800/60 group-hover:border-lime-400',
+    cardBorder: 'border-slate-800/90',
+    cardHoverBorder: 'hover:border-lime-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(132,204,22,0.15)]',
+    badgeStyle: 'bg-lime-500/15 text-lime-300 border-lime-500/40',
+    specColor: 'text-lime-400/90',
+  },
+  'Red Team & Angreppsverktyg': {
+    name: 'Red Team & Angreppsverktyg',
+    shortName: 'Red Team',
+    dotColor: 'bg-rose-500',
+    textColor: 'text-rose-400',
+    textHover: 'group-hover:text-rose-300',
+    chipActive: 'bg-rose-500 text-white font-bold shadow-md shadow-rose-500/30',
+    chipInactive: 'bg-rose-950/40 text-rose-300 hover:text-white border-rose-800/60 hover:border-rose-500/50',
+    iconBg: 'bg-rose-950/60',
+    iconBorder: 'border-rose-800/60 group-hover:border-rose-400',
+    cardBorder: 'border-slate-800/90',
+    cardHoverBorder: 'hover:border-rose-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(244,63,94,0.2)]',
+    badgeStyle: 'bg-rose-500/20 text-rose-300 border-rose-500/50',
+    specColor: 'text-rose-400/90',
+  },
+};
+
 interface PaletteProps {
   onAddDevice: (type: DeviceType) => void;
   activeCableType?: CableType;
@@ -462,28 +635,32 @@ export const Palette: React.FC<PaletteProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
-                className={`px-2 py-0.5 rounded-md font-semibold whitespace-nowrap transition ${
+                className={`px-2 py-0.5 rounded-md font-semibold whitespace-nowrap transition cursor-pointer ${
                   selectedCategory === 'all'
-                    ? 'bg-cyan-500 text-slate-950 font-bold'
+                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
                     : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
               >
                 Alla ({PALETTE_ITEMS.length})
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-2 py-0.5 rounded-md font-semibold whitespace-nowrap transition ${
-                    selectedCategory === cat
-                      ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/50'
-                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
-                  }`}
-                >
-                  {cat.split(' ')[0]}
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const theme = CATEGORY_THEMES[cat];
+                const isSelected = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-2 py-0.5 rounded-md font-semibold whitespace-nowrap transition cursor-pointer border ${
+                      isSelected
+                        ? theme?.chipActive || 'bg-cyan-500 text-slate-950 font-bold'
+                        : theme?.chipInactive || 'bg-slate-950 text-slate-400 hover:text-slate-200 border-slate-800'
+                    }`}
+                  >
+                    {theme?.shortName || cat.split(' ')[0]}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -505,15 +682,16 @@ export const Palette: React.FC<PaletteProps> = ({
               .map((cat) => {
                 const catItems = filteredItems.filter((i) => i.category === cat);
                 if (catItems.length === 0) return null;
+                const catTheme = CATEGORY_THEMES[cat];
 
                 return (
                   <div key={cat} className="space-y-1.5">
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-1 flex items-center justify-between border-b border-slate-800/60 pb-1">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                        {cat}
+                        <span className={`w-2 h-2 rounded-full ${catTheme?.dotColor || 'bg-cyan-400'}`} />
+                        <span className={catTheme?.textColor || 'text-slate-300'}>{cat}</span>
                       </span>
-                      <span className="text-slate-500 font-mono text-[9px] bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800">
+                      <span className="text-slate-400 font-mono text-[9px] bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800">
                         {catItems.length}
                       </span>
                     </div>
@@ -528,24 +706,32 @@ export const Palette: React.FC<PaletteProps> = ({
                             e.dataTransfer.effectAllowed = 'copy';
                           }}
                           onClick={() => onAddDevice(item.type)}
-                          className="group relative flex items-center gap-2.5 p-2 rounded-xl border border-slate-800/90 bg-slate-950 hover:bg-slate-850 hover:border-cyan-500/60 cursor-grab active:cursor-grabbing transition-all duration-150 shadow-sm hover:shadow-cyan-500/10"
+                          className={`group relative flex items-center gap-2.5 p-2 rounded-xl border bg-slate-950/90 hover:bg-slate-900 cursor-grab active:cursor-grabbing transition-all duration-150 shadow-sm ${
+                            catTheme?.cardBorder || 'border-slate-800/90'
+                          } ${catTheme?.cardHoverBorder || 'hover:border-cyan-500/60'} ${
+                            catTheme?.cardHoverGlow || 'hover:shadow-cyan-500/10'
+                          }`}
                         >
-                          <div className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-800 group-hover:border-cyan-500/40 group-hover:scale-105 transition-all shrink-0">
+                          <div
+                            className={`p-1.5 rounded-lg border group-hover:scale-105 transition-all shrink-0 ${
+                              catTheme?.iconBg || 'bg-slate-900/90'
+                            } ${catTheme?.iconBorder || 'border-slate-800'}`}
+                          >
                             <RealisticDeviceIcon type={item.type} size="sm" />
                           </div>
                           <div className="flex-1 min-w-0 pr-1">
                             <div className="flex items-center justify-between gap-1">
-                              <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 truncate font-sans">
+                              <span
+                                className={`text-xs font-bold text-slate-200 transition-colors ${
+                                  catTheme?.textHover || 'group-hover:text-cyan-300'
+                                } truncate font-sans`}
+                              >
                                 {item.label}
                               </span>
                               {item.badge && (
                                 <span
                                   className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
-                                    item.type === 'hacker'
-                                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                                      : item.category === 'Säkerhet & Brandvägg'
-                                      ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                                      : 'bg-slate-800 text-slate-400 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 border-slate-700/60'
+                                    catTheme?.badgeStyle || 'bg-slate-800 text-slate-400 border-slate-700/60'
                                   }`}
                                 >
                                   {item.badge}
@@ -556,7 +742,11 @@ export const Palette: React.FC<PaletteProps> = ({
                               {item.description}
                             </div>
                             {item.specs && (
-                              <div className="text-[9px] text-cyan-400/80 font-mono truncate mt-0.5 flex items-center gap-1">
+                              <div
+                                className={`text-[9px] font-mono truncate mt-0.5 flex items-center gap-1 ${
+                                  catTheme?.specColor || 'text-cyan-400/80'
+                                }`}
+                              >
                                 <span>&bull;</span>
                                 <span>{item.specs}</span>
                               </div>

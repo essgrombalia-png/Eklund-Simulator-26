@@ -25,6 +25,7 @@ import {
   Layers,
   Radio,
   Activity,
+  Brain,
 } from 'lucide-react';
 
 interface ScenarioModalProps {
@@ -33,6 +34,7 @@ interface ScenarioModalProps {
   onSelectScenario: (scenario: ProblemScenario) => void;
   completedScenarioIds: string[];
   activeScenarioId?: string | null;
+  onOpenCyberQuiz?: () => void;
 }
 
 export const ScenarioModal: React.FC<ScenarioModalProps> = ({
@@ -41,6 +43,7 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
   onSelectScenario,
   completedScenarioIds,
   activeScenarioId,
+  onOpenCyberQuiz,
 }) => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -146,11 +149,25 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
               {completedScenarioIds.length} av {PROBLEM_SCENARIOS.length} scenarier lösta
             </span>
           </div>
-          <div className="w-full sm:w-64 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700/50">
-            <div
-              className="bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 h-full transition-all duration-500"
-              style={{ width: `${completionPercent}%` }}
-            />
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="w-full sm:w-48 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700/50">
+              <div
+                className="bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 h-full transition-all duration-500"
+                style={{ width: `${completionPercent}%` }}
+              />
+            </div>
+            {onOpenCyberQuiz && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenCyberQuiz();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-indigo-500/20 via-cyan-500/20 to-teal-500/20 hover:from-indigo-500/30 hover:to-teal-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition shadow-sm shrink-0 cursor-pointer"
+              >
+                <Brain className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Kör Cyberquiz</span>
+              </button>
+            )}
           </div>
         </div>
 

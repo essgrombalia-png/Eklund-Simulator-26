@@ -38,6 +38,12 @@ export const NodeTooltip: React.FC<NodeTooltipProps> = ({
     let base = 15;
     switch (node.type) {
       case 'firewall':
+      case 'ids_ips':
+      case 'waf':
+      case 'ddos_scrubber':
+      case 'siem_soc':
+      case 'honeypot':
+      case 'hsm_vault':
       case 'hacker':
         base = 45;
         break;

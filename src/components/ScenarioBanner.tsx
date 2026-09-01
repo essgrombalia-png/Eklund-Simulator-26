@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   GripVertical,
   Move,
+  Brain,
 } from 'lucide-react';
 
 interface ScenarioBannerProps {
@@ -24,6 +25,7 @@ interface ScenarioBannerProps {
   onExit: () => void;
   onReset: () => void;
   onScenarioCompleted: (scenarioId: string) => void;
+  onOpenCyberQuiz?: (scenarioId: string, scenarioTitle: string) => void;
 }
 
 export const ScenarioBanner: React.FC<ScenarioBannerProps> = ({
@@ -33,6 +35,7 @@ export const ScenarioBanner: React.FC<ScenarioBannerProps> = ({
   onExit,
   onReset,
   onScenarioCompleted,
+  onOpenCyberQuiz,
 }) => {
   const [showHints, setShowHints] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -304,19 +307,46 @@ export const ScenarioBanner: React.FC<ScenarioBannerProps> = ({
               <span>Grattis! Nätverket är nu säkrat och godkänt.</span>
             </div>
 
+            {/* Cyberquiz Call-to-action */}
+            <div className="p-3.5 bg-gradient-to-r from-cyan-950/80 via-slate-900 to-indigo-950/80 border border-cyan-500/50 rounded-xl text-xs text-cyan-200 flex items-center justify-between gap-3 text-left">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-cyan-500/20 rounded-lg text-cyan-400 border border-cyan-500/30 shrink-0 animate-pulse">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="font-bold text-cyan-300 font-mono block">Cyberquiz Utmaning Tillgänglig!</span>
+                  <span className="text-[11px] text-slate-300">
+                    Svara på säkerhetsfrågor kopplade till detta scenario för <strong className="text-amber-300">+25% Bonus-XP</strong>.
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  if (onOpenCyberQuiz) {
+                    onOpenCyberQuiz(scenario.id, scenario.title);
+                  }
+                }}
+                className="px-3.5 py-2 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 font-black font-mono text-xs rounded-xl shadow-lg shadow-cyan-500/20 shrink-0 flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <Brain className="w-4 h-4" />
+                <span>Kör Quiz</span>
+              </button>
+            </div>
+
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => setShowSuccessModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition cursor-pointer"
               >
-                Stäng & Granska Nätverk
+                Stäng & Granska
               </button>
               <button
                 onClick={() => {
                   setShowSuccessModal(false);
                   onExit();
                 }}
-                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition"
+                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition cursor-pointer"
               >
                 <span>Nästa Utmaning</span>
                 <ArrowRight className="w-4 h-4" />

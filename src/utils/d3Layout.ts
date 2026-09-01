@@ -21,11 +21,16 @@ export function getDeviceTier(type: DeviceType): number {
 
     case 'firewall':
     case 'ids_ips':
+    case 'waf':
+    case 'ddos_scrubber':
     case 'router':
     case 'wifi_router':
       return 1;
 
     case 'load_balancer':
+    case 'siem_soc':
+    case 'hsm_vault':
+    case 'honeypot':
     case 'l3_switch':
     case 'switch':
       return 2;

@@ -11,6 +11,7 @@ import { SubnetCalculatorModal } from './components/SubnetCalculatorModal';
 import { ExportImportModal } from './components/ExportImportModal';
 import { IpConfigModal } from './components/IpConfigModal';
 import { AutoRepairModal } from './components/AutoRepairModal';
+import { CyberDefenseModal } from './components/CyberDefenseModal';
 import { CyberAwarenessModal } from './components/CyberAwarenessModal';
 import { AntivirusModal } from './components/AntivirusModal';
 import { IncidentResponseModal } from './components/IncidentResponseModal';
@@ -18,6 +19,7 @@ import { ContainerModal } from './components/ContainerModal';
 import { LayoutOptimizerModal } from './components/LayoutOptimizerModal';
 import { ScenarioModal } from './components/ScenarioModal';
 import { ScenarioBanner } from './components/ScenarioBanner';
+import { CyberQuizModal } from './components/CyberQuizModal';
 import { LandingPage } from './components/LandingPage';
 import { MatrixRain } from './components/MatrixRain';
 import { SettingsModal } from './components/SettingsModal';
@@ -282,11 +284,15 @@ export default function App() {
   const [showExportImport, setShowExportImport] = useState(false);
   const [showTrafficGen, setShowTrafficGen] = useState(false);
   const [showAutoRepairModal, setShowAutoRepairModal] = useState(false);
+  const [showCyberDefenseModal, setShowCyberDefenseModal] = useState(false);
   const [showCyberAwarenessModal, setShowCyberAwarenessModal] = useState(false);
   const [showAntivirusModal, setShowAntivirusModal] = useState(false);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showLayoutOptimizerModal, setShowLayoutOptimizerModal] = useState(false);
   const [showVisualDebugger, setShowVisualDebugger] = useState(false);
+  const [showCyberQuizModal, setShowCyberQuizModal] = useState(false);
+  const [quizScenarioId, setQuizScenarioId] = useState<string | null>(null);
+  const [quizScenarioTitle, setQuizScenarioTitle] = useState<string | null>(null);
 
   // Incident Response Realtime Tracker State
   const [incidents, setIncidents] = useState<IncidentLog[]>([]);
@@ -384,6 +390,11 @@ export default function App() {
       localStorage.setItem('eklund_completed_scenarios', JSON.stringify(next));
       return next;
     });
+
+    // Populate quiz scenario tie-in
+    const foundSc = PROBLEM_SCENARIOS.find((s) => s.id === scenarioId);
+    setQuizScenarioId(scenarioId);
+    setQuizScenarioTitle(foundSc ? foundSc.title : 'Nätverksscenario');
   };
 
   // Connection Test Ping State
@@ -1035,6 +1046,13 @@ export default function App() {
     updateTopology({ links: nextLinks }, `Uppdaterade anslutning`);
   };
 
+  // Update Multiple Links
+  const handleUpdateMultipleLinks = (updatedList: Link[]) => {
+    const map = new Map(updatedList.map((l) => [l.id, l]));
+    const nextLinks = links.map((l) => map.get(l.id) || l);
+    updateTopology({ links: nextLinks }, `Uppdaterade flera anslutningar`);
+  };
+
   // Delete Link
   const handleDeleteLink = (id: string) => {
     const nextLinks = links.filter((l) => l.id !== id);
@@ -1268,6 +1286,11 @@ export default function App() {
         onSelectScenario={handleSelectScenario}
         onOpenScenarioModal={() => setShowScenarioModal(true)}
         completedScenarioCount={completedScenarioIds.length}
+        onOpenCyberQuiz={() => {
+          setQuizScenarioId(null);
+          setQuizScenarioTitle(null);
+          setShowCyberQuizModal(true);
+        }}
         onOpenTerminal={() => setActiveTab('terminal')}
         onOpenPacketInspector={() => setActiveTab('packets')}
         onOpenTrafficGen={() => setShowTrafficGen(true)}
@@ -1275,6 +1298,7 @@ export default function App() {
         onOpenExportImport={() => setShowExportImport(true)}
         onOpenLayoutOptimizer={() => setShowLayoutOptimizerModal(true)}
         onOpenAutoRepair={() => setShowAutoRepairModal(true)}
+        onOpenCyberDefense={() => setShowCyberDefenseModal(true)}
         onOpenCyberAwareness={() => setShowCyberAwarenessModal(true)}
         onOpenAntivirus={() => setShowAntivirusModal(true)}
         onOpenIncidentResponse={() => setShowIncidentModal(true)}
@@ -1326,6 +1350,11 @@ export default function App() {
               onExit={handleExitProblemScenario}
               onReset={handleResetProblemScenario}
               onScenarioCompleted={handleScenarioCompleted}
+              onOpenCyberQuiz={(scId, scTitle) => {
+                setQuizScenarioId(scId);
+                setQuizScenarioTitle(scTitle);
+                setShowCyberQuizModal(true);
+              }}
             />
           )}
 
@@ -1573,6 +1602,30 @@ export default function App() {
         }}
       />
 
+      {/* Cyber Defense Center & Blue Team Operations Modal */}
+      <CyberDefenseModal
+        isOpen={showCyberDefenseModal}
+        onClose={() => setShowCyberDefenseModal(false)}
+        nodes={nodes}
+        links={links}
+        containers={containers}
+        packets={capturedPackets}
+        onUpdateNode={handleUpdateNode}
+        onUpdateMultipleNodes={handleUpdateMultipleNodes}
+        onUpdateLink={handleUpdateLink}
+        onUpdateMultipleLinks={handleUpdateMultipleLinks}
+        onAddDevice={handleAddDevice}
+        onSelectNodeOnCanvas={(nodeId) => {
+          setSelectedNodeId(nodeId);
+          setSelectedNodeIds([nodeId]);
+          setSelectedLinkId(null);
+          setSelectedContainerId(null);
+          setActiveTab('canvas');
+        }}
+        onOpenAntivirus={() => setShowAntivirusModal(true)}
+        onOpenIncidentResponse={() => setShowIncidentModal(true)}
+      />
+
       {/* Cyber Awareness & Hot-Map Dashboard */}
       <CyberAwarenessModal
         isOpen={showCyberAwarenessModal}
@@ -1691,6 +1744,23 @@ export default function App() {
         onSelectScenario={handleSelectProblemScenario}
         completedScenarioIds={completedScenarioIds}
         activeScenarioId={activeProblemScenario?.id}
+        onOpenCyberQuiz={() => {
+          setQuizScenarioId(null);
+          setQuizScenarioTitle(null);
+          setShowCyberQuizModal(true);
+        }}
+      />
+
+      {/* Cyberquiz & Network Security Academy Modal */}
+      <CyberQuizModal
+        isOpen={showCyberQuizModal}
+        onClose={() => setShowCyberQuizModal(false)}
+        completedScenarioId={quizScenarioId}
+        completedScenarioTitle={quizScenarioTitle}
+        onClearCompletedScenario={() => {
+          setQuizScenarioId(null);
+          setQuizScenarioTitle(null);
+        }}
       />
 
       {/* Incident Response & Cyber Kill-Chain Dashboard */}

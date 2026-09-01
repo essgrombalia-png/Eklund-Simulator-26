@@ -4,6 +4,11 @@ export type DeviceType =
   | 'wifi_router'
   | 'firewall'
   | 'ids_ips'
+  | 'waf'
+  | 'honeypot'
+  | 'siem_soc'
+  | 'ddos_scrubber'
+  | 'hsm_vault'
   | 'load_balancer'
   | 'switch'
   | 'l3_switch'
@@ -384,5 +389,47 @@ export interface AdvancedSettings {
   hackerAggression: 'low' | 'moderate' | 'aggressive' | 'extreme';
   autoContainmentOnBreach: boolean;
   mitreDetailLevel: 'standard' | 'verbose_hex';
+}
+
+// CyberQuiz Types
+export type QuizDifficulty = 'all' | 'easy' | 'medium' | 'hard';
+
+export type QuizCategory =
+  | 'Brandväggar & Nätverkssäkerhet'
+  | 'Zero-Trust & Segmentering'
+  | 'Kryptering, VPN & TLS'
+  | 'Malware, Ransomware & EDR'
+  | 'DDoS & Trafikmitigering'
+  | 'DNSSEC, ARP & MITM'
+  | 'WiFi, IoT & Trådlös Säkerhet'
+  | 'Incidenthantering & MITRE ATT&CK'
+  | 'Routing & Nätverksprotokoll';
+
+export interface CyberQuizQuestion {
+  id: string;
+  question: string;
+  category: QuizCategory;
+  difficulty: 'easy' | 'medium' | 'hard';
+  options: string[];
+  correctOptionIndex: number;
+  explanation: string;
+  securityTip: string;
+  relatedScenarioId?: string;
+  xpReward: number;
+}
+
+export interface QuizHistoryEntry {
+  questionId: string;
+  selectedOptionIndex: number;
+  isCorrect: boolean;
+  timestamp: string;
+  timeSpentSeconds: number;
+}
+
+export interface QuizRank {
+  title: string;
+  minXp: number;
+  badge: string;
+  color: string;
 }
 
