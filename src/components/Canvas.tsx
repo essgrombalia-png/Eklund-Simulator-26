@@ -1204,6 +1204,82 @@ export const Canvas: React.FC<CanvasProps> = ({
                     />
                   </circle>
                 )}
+
+                {/* Real-time Infection Spreading Visual Line & Particle Effects */}
+                {isUp && (nodeA?.isInfected || nodeB?.isInfected) && (
+                  <g key={`link-inf-${link.id}`} className="pointer-events-none">
+                    {/* Outer Plasma Glow */}
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke="#f43f5e"
+                      strokeWidth={strokeWidth + 6}
+                      strokeOpacity="0.4"
+                      filter="url(#glow-attack-high)"
+                      className="animate-pulse"
+                    />
+
+                    {/* Animated Pulsing Laser Flow */}
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke="#ec4899"
+                      strokeWidth={strokeWidth + 1}
+                      strokeDasharray="8,6"
+                      strokeOpacity="0.95"
+                      className="animate-laser-flow"
+                    />
+
+                    {/* High Intensity Spark Core */}
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                      strokeDasharray="4,8"
+                      strokeOpacity="0.9"
+                      className="animate-laser-flow"
+                    />
+
+                    {/* Infection Biohazard Particle Stream */}
+                    <circle r="4.5" fill="#f43f5e" filter="url(#glow-attack-high)">
+                      <animateMotion path={pathD} dur="1.2s" repeatCount="indefinite" />
+                    </circle>
+                    <circle r="3.5" fill="#ffffff" filter="url(#glow-attack-high)">
+                      <animateMotion path={pathD} dur="1.2s" begin="0.4s" repeatCount="indefinite" />
+                    </circle>
+                    <circle r="4" fill="#d946ef" filter="url(#glow-attack-high)">
+                      <animateMotion path={pathD} dur="1.2s" begin="0.8s" repeatCount="indefinite" />
+                    </circle>
+
+                    {/* Midpoint Infection Warning Badge */}
+                    <g transform={`translate(${(posA.x + posB.x) / 2}, ${(posA.y + posB.y) / 2})`}>
+                      <rect
+                        x="-44"
+                        y="-10"
+                        width="88"
+                        height="20"
+                        rx="10"
+                        fill="rgba(136, 19, 55, 0.95)"
+                        stroke="#f43f5e"
+                        strokeWidth="1.5"
+                        className="animate-pulse shadow-md"
+                      />
+                      <text
+                        x="0"
+                        y="3.5"
+                        textAnchor="middle"
+                        fill="#fecdd3"
+                        fontSize="8.5"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        letterSpacing="0.5"
+                      >
+                        ☣️ SMITTSPRIDNING
+                      </text>
+                    </g>
+                  </g>
+                )}
               </g>
             );
           })}
