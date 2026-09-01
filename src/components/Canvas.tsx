@@ -45,6 +45,7 @@ import {
   ContainerType,
   ContainerColor,
   CapturedPacket,
+  SimulatorThemeId,
 } from '../types';
 import { detectNodeWarnings } from '../utils/networkEngine';
 import { CABLE_DEFINITIONS } from '../utils/cableEngine';
@@ -94,6 +95,8 @@ interface CanvasProps {
   onSelectScenarioPreset?: (presetId: string) => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  currentThemeId?: SimulatorThemeId;
+  isLightMode?: boolean;
 }
 
 // Convert dotted-decimal subnet mask to CIDR prefix (e.g., 255.255.255.0 -> /24)
@@ -272,7 +275,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   onSelectScenarioPreset,
   onDragStart,
   onDragEnd,
+  currentThemeId,
+  isLightMode,
 }) => {
+  const isLight = isLightMode || currentThemeId === 'blueprint_light';
   const [internalDebugger, setInternalDebugger] = useState(false);
   const isDebuggerActive = showVisualDebugger !== undefined ? showVisualDebugger : internalDebugger;
   const handleToggleDebugger = onToggleVisualDebugger || (() => setInternalDebugger(!internalDebugger));
@@ -283,7 +289,9 @@ export const Canvas: React.FC<CanvasProps> = ({
   // Magnetic Grid & Snapping State
   const [snapToGrid, setSnapToGrid] = useState<boolean>(true);
   const [gridSize, setGridSize] = useState<number>(40);
-  const [gridStyle, setGridStyle] = useState<'dots' | 'lines' | 'blueprint' | 'off'>('dots');
+  const [gridStyle, setGridStyle] = useState<'dots' | 'lines' | 'blueprint' | 'off'>(
+    currentThemeId === 'blueprint_light' ? 'blueprint' : 'dots'
+  );
   const [smartAlign, setSmartAlign] = useState<boolean>(true);
   const [activeGuidelines, setActiveGuidelines] = useState<Array<{ type: 'x' | 'y'; coord: number; label: string }>>([]);
 
@@ -752,18 +760,25 @@ export const Canvas: React.FC<CanvasProps> = ({
   const getCanvasBackground = () => {
     if (gridStyle === 'off') {
       return {
-        backgroundColor: '#020617',
+        backgroundColor: isLight ? '#f0f6fc' : '#020617',
       };
     }
-    if (gridStyle === 'blueprint') {
+    if (gridStyle === 'blueprint' || currentThemeId === 'blueprint_light') {
       return {
-        backgroundColor: '#041024',
-        backgroundImage: `
-          linear-gradient(to right, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
-          linear-gradient(to right, rgba(56, 189, 248, 0.22) 1.5px, transparent 1.5px),
-          linear-gradient(to bottom, rgba(56, 189, 248, 0.22) 1.5px, transparent 1.5px)
-        `,
+        backgroundColor: isLight ? '#f0f6fc' : '#041024',
+        backgroundImage: isLight
+          ? `
+            linear-gradient(to right, rgba(2, 132, 199, 0.16) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(2, 132, 199, 0.16) 1px, transparent 1px),
+            linear-gradient(to right, rgba(2, 132, 199, 0.38) 1.5px, transparent 1.5px),
+            linear-gradient(to bottom, rgba(2, 132, 199, 0.38) 1.5px, transparent 1.5px)
+          `
+          : `
+            linear-gradient(to right, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+            linear-gradient(to right, rgba(56, 189, 248, 0.22) 1.5px, transparent 1.5px),
+            linear-gradient(to bottom, rgba(56, 189, 248, 0.22) 1.5px, transparent 1.5px)
+          `,
         backgroundSize: `
           ${gridSize * zoom}px ${gridSize * zoom}px,
           ${gridSize * zoom}px ${gridSize * zoom}px,
@@ -780,13 +795,20 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
     if (gridStyle === 'lines') {
       return {
-        backgroundColor: '#020617',
-        backgroundImage: `
-          linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
-          linear-gradient(to right, rgba(56, 189, 248, 0.16) 1.5px, transparent 1.5px),
-          linear-gradient(to bottom, rgba(56, 189, 248, 0.16) 1.5px, transparent 1.5px)
-        `,
+        backgroundColor: isLight ? '#f0f6fc' : '#020617',
+        backgroundImage: isLight
+          ? `
+            linear-gradient(to right, rgba(100, 116, 139, 0.16) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(100, 116, 139, 0.16) 1px, transparent 1px),
+            linear-gradient(to right, rgba(2, 132, 199, 0.3) 1.5px, transparent 1.5px),
+            linear-gradient(to bottom, rgba(2, 132, 199, 0.3) 1.5px, transparent 1.5px)
+          `
+          : `
+            linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+            linear-gradient(to right, rgba(56, 189, 248, 0.16) 1.5px, transparent 1.5px),
+            linear-gradient(to bottom, rgba(56, 189, 248, 0.16) 1.5px, transparent 1.5px)
+          `,
         backgroundSize: `
           ${gridSize * zoom}px ${gridSize * zoom}px,
           ${gridSize * zoom}px ${gridSize * zoom}px,
@@ -803,11 +825,16 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
     // Default: 'dots'
     return {
-      backgroundColor: '#020617',
-      backgroundImage: `
-        radial-gradient(circle, rgba(56, 189, 248, 0.18) 1.5px, transparent 1.5px),
-        radial-gradient(circle, rgba(148, 163, 184, 0.3) 2px, transparent 2px)
-      `,
+      backgroundColor: isLight ? '#f0f6fc' : '#020617',
+      backgroundImage: isLight
+        ? `
+          radial-gradient(circle, rgba(2, 132, 199, 0.35) 1.5px, transparent 1.5px),
+          radial-gradient(circle, rgba(15, 23, 42, 0.22) 2px, transparent 2px)
+        `
+        : `
+          radial-gradient(circle, rgba(56, 189, 248, 0.18) 1.5px, transparent 1.5px),
+          radial-gradient(circle, rgba(148, 163, 184, 0.3) 2px, transparent 2px)
+        `,
       backgroundSize: `${gridSize * zoom}px ${gridSize * zoom}px, ${gridSize * 4 * zoom}px ${gridSize * 4 * zoom}px`,
       backgroundPosition: `${pan.x}px ${pan.y}px, ${pan.x}px ${pan.y}px`,
     };
@@ -2234,15 +2261,27 @@ export const Canvas: React.FC<CanvasProps> = ({
               {/* Device Labels & On-Canvas Badges */}
               <div className="mt-1.5 text-center min-w-[110px] max-w-[155px] mx-auto pointer-events-none flex flex-col items-center">
                 {/* Device Name */}
-                <div className="text-xs font-semibold text-slate-100 truncate max-w-[145px] tracking-tight drop-shadow-md flex items-center justify-center gap-1">
+                <div
+                  className={`text-xs font-semibold truncate max-w-[145px] tracking-tight flex items-center justify-center gap-1 ${
+                    isLight
+                      ? 'text-slate-900 font-bold bg-white/95 px-2 py-0.5 rounded-lg shadow-sm border border-slate-300'
+                      : 'text-slate-100 drop-shadow-md'
+                  }`}
+                >
                   {node.isInfected && <span className="text-rose-400 font-bold animate-pulse" title="Infekterad enhet">☣️</span>}
                   <span>{node.name}</span>
                 </div>
 
                 {/* On-Canvas IP Address (Shown by default unless showIpOnCanvas is false) */}
                 {node.showIpOnCanvas !== false && (
-                  <div className="text-[10px] font-mono text-cyan-400/90 truncate mt-0.5 flex items-center justify-center gap-1">
-                    <span className="w-1 h-1 rounded-full bg-cyan-400 shrink-0" />
+                  <div
+                    className={`text-[10px] font-mono truncate mt-0.5 flex items-center justify-center gap-1 ${
+                      isLight
+                        ? 'text-sky-950 font-bold bg-sky-100/95 px-1.5 py-0.5 rounded-md border border-sky-300 shadow-xs'
+                        : 'text-cyan-400/90'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLight ? 'bg-sky-600' : 'bg-cyan-400'}`} />
                     <span>{node.type === 'internet' ? 'WAN Gateway' : node.ip || 'DHCP...'}</span>
                   </div>
                 )}

@@ -1589,5 +1589,1062 @@ export const PROBLEM_SCENARIOS: ProblemScenario[] = [
       };
     },
   },
+  {
+    id: 'sc_16_subnet_mismatch',
+    title: '16. Subnätmask-Missen i Fabriks-LAN',
+    category: 'DHCP & IP',
+    difficulty: 'easy',
+    estimatedTime: '3-5 min',
+    iconName: 'Layers',
+    summary: 'En nyinstallerad robotarm i fabriken kan inte kommunicera med styrdatorn på grund av felaktig subnätmask.',
+    problemDescription: 'Under driftsättning av monteringslinjen upptäcktes att Fabriksrobot CNC-1 inte kan ta emot styrkommandon från Operatörsdatorn (192.168.1.20). Roboten har tilldelats IP 192.168.1.180 men masken ställdes felaktigt in på 255.255.255.128 (/25), vilket gör att den tror att operatörsdatorn ligger på ett annat subnät. Båda enheterna är anslutna till Fabriks-Switchen.',
+    initialNodes: [
+      {
+        id: 'n_sw_factory',
+        type: 'switch',
+        name: 'Fabriks-Switch L2',
+        ip: '192.168.1.1',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:11:22:33:88:01',
+        x: 340,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_operator_pc',
+        type: 'client_pc',
+        name: 'Operatörsdator Fabrik',
+        ip: '192.168.1.20',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:11:22:33:88:20',
+        x: 600,
+        y: 160,
+        on: true,
+      },
+      {
+        id: 'n_robot_cnc',
+        type: 'iot_plc',
+        name: 'Fabriksrobot CNC-1',
+        ip: '192.168.1.180',
+        subnetMask: '255.255.255.128', // FEL MASK (/25 istället för /24)
+        gateway: '192.168.1.1',
+        mac: '00:11:22:33:88:30',
+        x: 600,
+        y: 360,
+        on: true,
+      },
+    ],
+    initialLinks: [
+      { id: 'l1', a: 'n_sw_factory', b: 'n_operator_pc', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l2', a: 'n_sw_factory', b: 'n_robot_cnc', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Korrigera subnätmasken på "Fabriksrobot CNC-1" till 255.255.255.0.',
+        hint: 'Klicka på Fabriksrobot CNC-1 och ändra nätmasken i IP-konfigurationen till 255.255.255.0.',
+      },
+      {
+        id: 't2',
+        description: 'Säkerställ att Gateway är inställd på 192.168.1.1 på Fabriksrobot CNC-1.',
+        hint: 'Kontrollera att Gateway-fältet på roboten innehåller 192.168.1.1.',
+      },
+      {
+        id: 't3',
+        description: 'Säkerställ att roboten och operatörsdatorn båda är påslagna.',
+        hint: 'Kontrollera att båda enheterna har grön status och att strömmen är på.',
+      },
+    ],
+    validateSolution: (nodes) => {
+      const robot = nodes.find((n) => n.id === 'n_robot_cnc');
+      const opPc = nodes.find((n) => n.id === 'n_operator_pc');
+
+      const isMaskCorrect = robot?.subnetMask === '255.255.255.0';
+      const isGatewayCorrect = robot?.gateway === '192.168.1.1';
+      const isBothPowered = robot?.on !== false && opPc?.on !== false;
+
+      const isSolved = isMaskCorrect && isGatewayCorrect && isBothPowered;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: isMaskCorrect,
+          t2: isGatewayCorrect,
+          t3: isBothPowered,
+        },
+        message: isSolved
+          ? 'FABRIKSNÄTVERK ÅTERSTÄLLT! Subnätmasken är nu synkroniserad till /24 (255.255.255.0) och CNC-roboten kan ta emot telemetri och styrsignaler från operatörsdatorn!'
+          : 'Roboten kan fortfarande inte kommunicera. Ändra subnätmasken till 255.255.255.0 och gateway till 192.168.1.1.',
+      };
+    },
+  },
+  {
+    id: 'sc_17_dns_phishing_poison',
+    title: '17. DNS Spoofing & Phishing-Skydd',
+    category: 'DNS & Web',
+    difficulty: 'medium',
+    estimatedTime: '5-7 min',
+    iconName: 'Globe',
+    summary: 'En manipulerad DNS-post lurar anställda till en falsk inloggningsportal vid besök på portal.foretag.se.',
+    problemDescription: 'SOC-teamet har larmat om att anställda som surfar till "portal.foretag.se" hamnar på en falsk phishing-sida (198.51.100.99). Företagets interna DNS-server har komprometterats och A-posten pekar mot angriparens server istället för den legitima Autentiseringsportalen (192.168.10.25). Rätta till DNS-tabellen och säkra webbtjänsten.',
+    initialNodes: [
+      {
+        id: 'n_sw_core',
+        type: 'switch',
+        name: 'Core Switch',
+        ip: '192.168.10.1',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.10.1',
+        mac: '00:44:55:66:77:01',
+        x: 320,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_dns_server',
+        type: 'server_dns',
+        name: 'Företagets Primära DNS',
+        ip: '192.168.10.53',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.10.1',
+        mac: '00:44:55:66:77:11',
+        x: 580,
+        y: 140,
+        on: true,
+        dnsRecords: [
+          { id: '1', hostname: 'portal.foretag.se', ip: '198.51.100.99', type: 'A' }, // SPOOFAD POST!
+        ],
+        services: { dns: true },
+      },
+      {
+        id: 'n_auth_portal',
+        type: 'server_web',
+        name: 'Säker Autentiseringsportal',
+        ip: '192.168.10.25',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.10.1',
+        mac: '00:44:55:66:77:25',
+        x: 580,
+        y: 380,
+        on: true,
+        services: { http: true },
+      },
+    ],
+    initialLinks: [
+      { id: 'l1', a: 'n_sw_core', b: 'n_dns_server', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l2', a: 'n_sw_core', b: 'n_auth_portal', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Öppna DNS-posterna på "Företagets Primära DNS" och ändra A-posten för "portal.foretag.se" till 192.168.10.25.',
+        hint: 'Klicka på DNS-servern, hitta posten för portal.foretag.se och ändra IP-adressen till den legitima servern 192.168.10.25.',
+      },
+      {
+        id: 't2',
+        description: 'Ta bort eventuella kvarvarande referenser till den skadliga IP-adressen 198.51.100.99.',
+        hint: 'Säkerställ att ingen DNS-post pekar på 198.51.100.99.',
+      },
+      {
+        id: 't3',
+        description: 'Verifiera att Säker Autentiseringsportal är aktiv med HTTP-tjänst aktiverad.',
+        hint: 'Se till att Autentiseringsportalen är påslagen och att HTTP-webbtjänsten är igång.',
+      },
+    ],
+    validateSolution: (nodes) => {
+      const dns = nodes.find((n) => n.id === 'n_dns_server');
+      const auth = nodes.find((n) => n.id === 'n_auth_portal');
+      const records = dns?.dnsRecords || [];
+
+      const pointsToLegit = records.some(
+        (r) =>
+          r.type === 'A' &&
+          (r.hostname.toLowerCase() === 'portal.foretag.se' || r.hostname.toLowerCase() === 'portal') &&
+          r.ip === '192.168.10.25'
+      );
+      const hasSpoofedIp = records.some((r) => r.ip === '198.51.100.99');
+      const isAuthActive = auth?.on !== false && Boolean(auth?.services?.http);
+
+      const isSolved = pointsToLegit && !hasSpoofedIp && isAuthActive;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: pointsToLegit,
+          t2: !hasSpoofedIp,
+          t3: isAuthActive,
+        },
+        message: isSolved
+          ? 'DNS-CACHE OCH POSTER RENSADE! portal.foretag.se pekar nu säkert mot 192.168.10.25 och alla inloggningsförsök skyddas mot nätfiske!'
+          : 'DNS-tabellen innehåller fortfarande fel eller pekar mot fel IP. Sätt A-posten till 192.168.10.25 och ta bort 198.51.100.99.',
+      };
+    },
+  },
+  {
+    id: 'sc_18_stp_broadcast_storm',
+    title: '18. Switching-Loop & Broadcast Storm',
+    category: 'Felsökning',
+    difficulty: 'medium',
+    estimatedTime: '6-8 min',
+    iconName: 'Zap',
+    summary: 'En felkopplad kabel mellan två access-switchar har skapat en nätverksloop som orsakar 100% paketförlust.',
+    problemDescription: 'En tekniker råkade koppla en patchkabel mellan Access Switch A och Access Switch B. Eftersom båda redan är anslutna till Distributionsswitchen har en switching-loop uppstått. Detta har utlöst en broadcast storm med maximal paketförlust som paralyserat båda kontorsdatorerna.',
+    initialNodes: [
+      {
+        id: 'n_sw_dist',
+        type: 'l3_switch',
+        name: 'Distributions Switch L3',
+        ip: '192.168.1.1',
+        subnetMask: '255.255.255.0',
+        gateway: '',
+        mac: '00:33:44:55:66:01',
+        x: 320,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_sw_a',
+        type: 'switch',
+        name: 'Access Switch A (Våning 1)',
+        ip: '192.168.1.2',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:33:44:55:66:02',
+        x: 560,
+        y: 150,
+        on: true,
+      },
+      {
+        id: 'n_sw_b',
+        type: 'switch',
+        name: 'Access Switch B (Våning 2)',
+        ip: '192.168.1.3',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:33:44:55:66:03',
+        x: 560,
+        y: 370,
+        on: true,
+      },
+      {
+        id: 'n_pc_a',
+        type: 'client_pc',
+        name: 'Kontorsdator 1 (Vån 1)',
+        ip: '192.168.1.101',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:33:44:55:66:11',
+        x: 780,
+        y: 150,
+        on: true,
+      },
+      {
+        id: 'n_pc_b',
+        type: 'client_pc',
+        name: 'Kontorsdator 2 (Vån 2)',
+        ip: '192.168.1.102',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:33:44:55:66:12',
+        x: 780,
+        y: 370,
+        on: true,
+      },
+    ],
+    initialLinks: [
+      { id: 'l1', a: 'n_sw_dist', b: 'n_sw_a', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 95, duplex: 'full' },
+      { id: 'l2', a: 'n_sw_dist', b: 'n_sw_b', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 95, duplex: 'full' },
+      { id: 'l_loop', a: 'n_sw_a', b: 'n_sw_b', type: 'cat6', bandwidthMbps: 1000, latencyMs: 80, packetLossPercent: 100, duplex: 'full' }, // SKADLIG LOOP-LÄNK!
+      { id: 'l4', a: 'n_sw_a', b: 'n_pc_a', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 90, duplex: 'full' },
+      { id: 'l5', a: 'n_sw_b', b: 'n_pc_b', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 90, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Ta bort den loopande kabeln mellan Access Switch A och Access Switch B.',
+        hint: 'Klicka på länken mellan Switch A och Switch B och klicka på "Ta bort länk" (Delete Link).',
+      },
+      {
+        id: 't2',
+        description: 'Återställ paketförlusten till 0% på länkarna mellan Distributionsswitchen och access-switcharna.',
+        hint: 'Klicka på länkarna och sätt Packet Loss (%) till 0 i länk-inspektören.',
+      },
+      {
+        id: 't3',
+        description: 'Säkerställ att Kontorsdator 1 och 2 båda når Distributions Switch utan paketförlust.',
+        hint: 'Se till att länkarna till PC-datorerna har 0% paketförlust och att switcharna är anslutna.',
+      },
+    ],
+    validateSolution: (nodes, links) => {
+      const hasLoopLink = links.some(
+        (l) => (l.a === 'n_sw_a' && l.b === 'n_sw_b') || (l.a === 'n_sw_b' && l.b === 'n_sw_a')
+      );
+      const isSwitchAConnected = links.some(
+        (l) => (l.a === 'n_sw_dist' && l.b === 'n_sw_a') || (l.a === 'n_sw_a' && l.b === 'n_sw_dist')
+      );
+      const isSwitchBConnected = links.some(
+        (l) => (l.a === 'n_sw_dist' && l.b === 'n_sw_b') || (l.a === 'n_sw_b' && l.b === 'n_sw_dist')
+      );
+      const allLossClean = links.every((l) => (l.packetLossPercent || 0) === 0);
+
+      const task1Done = !hasLoopLink;
+      const task2Done = allLossClean;
+      const task3Done = isSwitchAConnected && isSwitchBConnected && allLossClean;
+
+      const isSolved = task1Done && task2Done && task3Done;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: task1Done,
+          t2: task2Done,
+          t3: task3Done,
+        },
+        message: isSolved
+          ? 'BROADCAST STORM HÄVD! Nätverksloopen har avlägsnats, paketförlusten är 0% och kontorsnätet har återfått blixtsnabb genomströmning!'
+          : 'Nätverket har fortfarande problem. Ta bort länken mellan Switch A och B samt kontrollera att länkarnas paketförlust är 0%.',
+      };
+    },
+  },
+  {
+    id: 'sc_19_iot_vlan_quarantine',
+    title: '19. IoT Karantän & Säker VLAN-Segregering',
+    category: 'VLAN & Isolation',
+    difficulty: 'medium',
+    estimatedTime: '6-8 min',
+    iconName: 'Radio',
+    summary: 'Smarta övervakningskameror och IoT-sensorer måste isoleras på ett separat IoT-VLAN (VLAN 50) för att skydda databasen.',
+    problemDescription: 'En penetrationstestare upptäckte att smarta övervakningskameror och IoT-sensorer delar samma VLAN (VLAN 10) som den interna SQL Databasservern (192.168.10.50). Flytta IoT-switchen till VLAN 50 och skapa en brandväggsregel i NGFW som blockerar all IoT-trafik från att nå databasservern.',
+    initialNodes: [
+      {
+        id: 'n_fw_ngfw',
+        type: 'firewall',
+        name: 'Enterprise NGFW',
+        ip: '192.168.1.1',
+        subnetMask: '255.255.255.0',
+        gateway: '',
+        mac: '00:88:99:AA:BB:01',
+        x: 200,
+        y: 260,
+        on: true,
+        firewallRules: [], // INGA BRANDVÄGGSREGLER ÄNNU!
+      },
+      {
+        id: 'n_sw_db',
+        type: 'switch',
+        name: 'Databas Switch (VLAN 10)',
+        ip: '192.168.10.1',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:88:99:AA:BB:10',
+        x: 460,
+        y: 150,
+        on: true,
+        vlanId: 10,
+      },
+      {
+        id: 'n_sw_iot',
+        type: 'switch',
+        name: 'IoT Kameraswitch',
+        ip: '192.168.10.2', // FEL VLAN (Ligger på VLAN 10)!
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.1.1',
+        mac: '00:88:99:AA:BB:50',
+        x: 460,
+        y: 370,
+        on: true,
+        vlanId: 10, // FELAKTIGT VLAN 10
+      },
+      {
+        id: 'n_db_server',
+        type: 'server_db',
+        name: 'Känslig Kunddatabas SQL',
+        ip: '192.168.10.50',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.10.1',
+        mac: '00:88:99:AA:BB:55',
+        x: 720,
+        y: 150,
+        on: true,
+      },
+      {
+        id: 'n_camera_iot',
+        type: 'iot_camera',
+        name: 'Smart IP Kamera Entré',
+        ip: '192.168.50.21',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.50.1',
+        mac: '00:88:99:AA:BB:77',
+        x: 720,
+        y: 370,
+        on: true,
+      },
+    ],
+    initialLinks: [
+      { id: 'l1', a: 'n_fw_ngfw', b: 'n_sw_db', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l2', a: 'n_fw_ngfw', b: 'n_sw_iot', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l3', a: 'n_sw_db', b: 'n_db_server', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l4', a: 'n_sw_iot', b: 'n_camera_iot', type: 'cat6', bandwidthMbps: 100, latencyMs: 2, packetLossPercent: 0, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Ändra VLAN på "IoT Kameraswitch" till VLAN 50.',
+        hint: 'Klicka på IoT Kameraswitch och ändra VLAN ID till 50 i enhetsinställningarna.',
+      },
+      {
+        id: 't2',
+        description: 'Skapa en brandväggsregel på Enterprise NGFW som blockerar ("block") trafik till destination 192.168.10.50.',
+        hint: 'Klicka på Enterprise NGFW, lägg till en regel: Action: Block, Dest IP: 192.168.10.50 (eller port 5432/3306).',
+      },
+      {
+        id: 't3',
+        description: 'Säkerställ att Känslig Kunddatabas SQL är online och skyddad.',
+        hint: 'Kontrollera att databasservern är påslagen och ansluten till Databas Switchen.',
+      },
+    ],
+    validateSolution: (nodes) => {
+      const iotSw = nodes.find((n) => n.id === 'n_sw_iot');
+      const fw = nodes.find((n) => n.id === 'n_fw_ngfw');
+      const db = nodes.find((n) => n.id === 'n_db_server');
+
+      const isVlan50 = iotSw?.vlanId === 50;
+      const hasBlockRule = Boolean(
+        fw?.firewallRules?.some(
+          (r) =>
+            r.action === 'block' &&
+            (r.destIp === '192.168.10.50' || r.destIp === '192.168.10.*' || r.destIp === '*' || r.protocol === 'MALWARE')
+        )
+      );
+      const isDbOnline = db?.on !== false;
+
+      const isSolved = isVlan50 && hasBlockRule && isDbOnline;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: isVlan50,
+          t2: hasBlockRule,
+          t3: isDbOnline,
+        },
+        message: isSolved
+          ? 'IOT-KARANTÄN AKTIVERAD! IoT-kamerorna är nu isolerade på VLAN 50 och brandväggen stoppar all obehörig trafik mot SQL-databasen!'
+          : 'IoT-enheterna är inte säkrade ännu. Ändra IoT-switchens VLAN till 50 och skapa en block-regel mot databasen i brandväggen.',
+      };
+    },
+  },
+  {
+    id: 'sc_20_ransomware_containment',
+    title: '20. Ransomware Lateral Movement & Honeypot',
+    category: 'Säkerhet',
+    difficulty: 'hard',
+    estimatedTime: '8-10 min',
+    iconName: 'Skull',
+    summary: 'En infekterad dator försöker sprida ransomware via SMB (port 445). Isolera hotet och säkra backuperna.',
+    problemDescription: 'En användare på säljavdelningen öppnade en skadlig bilaga och infekterades med Ransomware. Skadlig kod försöker nu sprida sig över port 445 till företagets Backup NAS (192.168.20.100). Du måste omedelbart stänga av eller koppla ur den infekterade datorn, konfigurera brandväggen att blockera skadlig kod, och säkerställa att Backup NAS förblir skyddad.',
+    initialNodes: [
+      {
+        id: 'n_fw_core',
+        type: 'firewall',
+        name: 'Next-Gen Perimeter Firewall',
+        ip: '192.168.20.1',
+        subnetMask: '255.255.255.0',
+        gateway: '',
+        mac: '00:99:AA:BB:CC:01',
+        x: 220,
+        y: 260,
+        on: true,
+        firewallRules: [],
+      },
+      {
+        id: 'n_sw_office',
+        type: 'switch',
+        name: 'Kontor Access Switch',
+        ip: '192.168.20.2',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.20.1',
+        mac: '00:99:AA:BB:CC:02',
+        x: 460,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_pc_clean',
+        type: 'client_pc',
+        name: 'Ekonomi PC 1 (Ren)',
+        ip: '192.168.20.11',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.20.1',
+        mac: '00:99:AA:BB:CC:11',
+        x: 700,
+        y: 120,
+        on: true,
+      },
+      {
+        id: 'n_pc_infected',
+        type: 'client_pc',
+        name: 'Sälj PC 2 (INFEKTERAD)',
+        ip: '192.168.20.12',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.20.1',
+        mac: '00:99:AA:BB:CC:12',
+        x: 700,
+        y: 260,
+        on: true,
+        isInfected: true, // INFEKTERAD MED RANSOMWARE!
+      },
+      {
+        id: 'n_nas_backup',
+        type: 'server_nas',
+        name: 'Företags Backup NAS',
+        ip: '192.168.20.100',
+        subnetMask: '255.255.255.0',
+        gateway: '192.168.20.1',
+        mac: '00:99:AA:BB:CC:99',
+        x: 700,
+        y: 400,
+        on: true,
+      },
+    ],
+    initialLinks: [
+      { id: 'l1', a: 'n_fw_core', b: 'n_sw_office', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l2', a: 'n_sw_office', b: 'n_pc_clean', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l3', a: 'n_sw_office', b: 'n_pc_infected', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l4', a: 'n_sw_office', b: 'n_nas_backup', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Isolera "Sälj PC 2 (INFEKTERAD)" genom att stänga av strömmen eller ta bort länken.',
+        hint: 'Klicka på Sälj PC 2 och stäng av strömbrytaren (Power Off) eller ta bort dess kabel till switchen.',
+      },
+      {
+        id: 't2',
+        description: 'Lägg till en brandväggsregel i Next-Gen Perimeter Firewall som blockerar ("block") protokollet "MALWARE" eller destination 192.168.20.100.',
+        hint: 'Öppna brandväggen och skapa en regel med Action: Block och Protocol: MALWARE (eller Destination IP: 192.168.20.100).',
+      },
+      {
+        id: 't3',
+        description: 'Säkerställ att Företags Backup NAS och Ekonomi PC 1 förblir online och anslutna.',
+        hint: 'Kontrollera att backup-servern och den rena PC:n har grön ström och är anslutna till switchen.',
+      },
+    ],
+    validateSolution: (nodes, links) => {
+      const infected = nodes.find((n) => n.id === 'n_pc_infected');
+      const fw = nodes.find((n) => n.id === 'n_fw_core');
+      const nas = nodes.find((n) => n.id === 'n_nas_backup');
+      const clean = nodes.find((n) => n.id === 'n_pc_clean');
+
+      const isInfectedIsolated =
+        infected?.on === false ||
+        !links.some((l) => l.a === 'n_pc_infected' || l.b === 'n_pc_infected');
+
+      const hasFirewallBlock = Boolean(
+        fw?.firewallRules?.some(
+          (r) =>
+            r.action === 'block' &&
+            (r.protocol === 'MALWARE' || r.destIp === '192.168.20.100' || r.port === 445)
+        )
+      );
+
+      const isNasSafeAndUp = nas?.on !== false && clean?.on !== false;
+
+      const isSolved = isInfectedIsolated && hasFirewallBlock && isNasSafeAndUp;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: isInfectedIsolated,
+          t2: hasFirewallBlock,
+          t3: isNasSafeAndUp,
+        },
+        message: isSolved
+          ? 'RANSOMWARE NEUTRALISERAT! Den infekterade klienten har isolerats och brandväggen skyddar backup-servern från kryptering och dataläckage!'
+          : 'Hotet är inte avvärjt. Stäng av den infekterade datorn och konfigurera en block-regel för skadlig kod i brandväggen.',
+      };
+    },
+  },
+  {
+    id: 'sc_21_sdwan_ospf_failover',
+    title: '21. Multi-Site SD-WAN & OSPF Route Failover',
+    category: 'Routing',
+    difficulty: 'hard',
+    estimatedTime: '8-12 min',
+    iconName: 'Cloud',
+    summary: 'Primär fiberlänk mellan Göteborg och Stockholm har grävts av. Konfigurera backup-routing via Malmö-noden.',
+    problemDescription: 'Ett fiberavbrott har brutit den direkta linjen mellan Göteborgskontoret och Stockholm HQ. Göteborgsfilialen har förlorat kontakt med det centrala ERP-systemet (10.0.10.50). Upprätta en backup-länk mellan Göteborg och Malmö Backup Router och uppdatera Göteborgs Gateway till 10.0.2.1.',
+    initialNodes: [
+      {
+        id: 'n_r_goteborg',
+        type: 'router',
+        name: 'Göteborg Edge Router',
+        ip: '10.0.2.5',
+        subnetMask: '255.255.255.0',
+        gateway: '10.0.1.1', // FÖRÄLDRAD GATEWAY TILL BRUTEN LÄNK!
+        mac: '00:55:66:77:88:01',
+        x: 180,
+        y: 180,
+        on: true,
+      },
+      {
+        id: 'n_r_malmo',
+        type: 'router',
+        name: 'Malmö Backup Router',
+        ip: '10.0.2.1',
+        subnetMask: '255.255.255.0',
+        gateway: '10.0.3.1',
+        mac: '00:55:66:77:88:02',
+        x: 420,
+        y: 380,
+        on: true,
+      },
+      {
+        id: 'n_r_stockholm',
+        type: 'router',
+        name: 'Stockholm HQ Router',
+        ip: '10.0.3.1',
+        subnetMask: '255.255.255.0',
+        gateway: '',
+        mac: '00:55:66:77:88:03',
+        x: 660,
+        y: 180,
+        on: true,
+      },
+      {
+        id: 'n_srv_erp',
+        type: 'server_db',
+        name: 'Centrallager ERP Server',
+        ip: '10.0.10.50',
+        subnetMask: '255.255.255.0',
+        gateway: '10.0.3.1',
+        mac: '00:55:66:77:88:50',
+        x: 880,
+        y: 180,
+        on: true,
+      },
+    ],
+    initialLinks: [
+      { id: 'l_malmo_sthlm', a: 'n_r_malmo', b: 'n_r_stockholm', type: 'fiber', bandwidthMbps: 1000, latencyMs: 4, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l_sthlm_erp', a: 'n_r_stockholm', b: 'n_srv_erp', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      // SAKNAR LÄNK mellan n_r_goteborg och n_r_malmo!
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Dra en Cat6- eller Fiber-länk mellan "Göteborg Edge Router" och "Malmö Backup Router".',
+        hint: 'Välj kabelverktyget och anslut Göteborg Edge Router till Malmö Backup Router.',
+      },
+      {
+        id: 't2',
+        description: 'Uppdatera Gateway på "Göteborg Edge Router" till 10.0.2.1.',
+        hint: 'Klicka på Göteborgsroutern och ändra Gateway-adressen till Malmö-routerns IP (10.0.2.1).',
+      },
+      {
+        id: 't3',
+        description: 'Säkerställ att alla tre routrar samt Centrallager ERP Server är online.',
+        hint: 'Kontrollera att alla routrar och servern har strömmen påslagen.',
+      },
+    ],
+    validateSolution: (nodes, links) => {
+      const gbg = nodes.find((n) => n.id === 'n_r_goteborg');
+      const malmo = nodes.find((n) => n.id === 'n_r_malmo');
+      const sthlm = nodes.find((n) => n.id === 'n_r_stockholm');
+      const erp = nodes.find((n) => n.id === 'n_srv_erp');
+
+      const hasGbgMalmoLink = links.some(
+        (l) =>
+          (l.a === 'n_r_goteborg' && l.b === 'n_r_malmo') ||
+          (l.a === 'n_r_malmo' && l.b === 'n_r_goteborg')
+      );
+
+      const isGatewayUpdated = gbg?.gateway === '10.0.2.1';
+      const isAllOnline =
+        gbg?.on !== false && malmo?.on !== false && sthlm?.on !== false && erp?.on !== false;
+
+      const isSolved = hasGbgMalmoLink && isGatewayUpdated && isAllOnline;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: hasGbgMalmoLink,
+          t2: isGatewayUpdated,
+          t3: isAllOnline,
+        },
+        message: isSolved
+          ? 'SD-WAN FAILOVER AKTIVERAD! Trafiken från Göteborg dirigeras nu sömlöst via Malmö till Stockholm HQ och ERP-systemet!'
+          : 'Failover är inte komplett. Anslut kabeln mellan Göteborg och Malmö samt sätt Gateway på Göteborg till 10.0.2.1.',
+      };
+    },
+  },
+  {
+    id: 'sc_22_zerotrust_api_ingress',
+    title: '22. Zero-Trust Kubernetes API Gateway & WAF',
+    category: 'Säkerhet',
+    difficulty: 'expert',
+    estimatedTime: '10-15 min',
+    iconName: 'Lock',
+    summary: 'Ett mikrotjänst-kluster exponeras direkt mot internet. Säkra arkitekturen med API Gateway, TLS och WAF.',
+    problemDescription: 'I ett nytt Kubernetes-kluster är både Betalningsdatabasen (172.16.0.88) och Auth Pods direkt anslutna mot WAN utan Web Application Firewall (WAF) eller API-gateway. All publik trafik måste tvingas genom Ingress Gateway (172.16.0.10) på port 443/HTTPS, och direkt WAN-åtkomst till databasen måste blockeras med en strikt brandväggsregel.',
+    initialNodes: [
+      {
+        id: 'n_wan_inet',
+        type: 'internet',
+        name: 'Publikt Internet (WAN)',
+        ip: '198.51.100.1',
+        subnetMask: '255.255.255.0',
+        gateway: '',
+        mac: '00:AA:BB:CC:DD:01',
+        x: 100,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_fw_waf',
+        type: 'firewall',
+        name: 'WAF & Zero-Trust NGFW',
+        ip: '198.51.100.2',
+        subnetMask: '255.255.255.0',
+        gateway: '198.51.100.1',
+        mac: '00:AA:BB:CC:DD:02',
+        x: 300,
+        y: 260,
+        on: true,
+        firewallRules: [], // SAKNAR WAF-REGLER!
+      },
+      {
+        id: 'n_k8s_ingress',
+        type: 'server_web',
+        name: 'K8s Ingress API Gateway',
+        ip: '172.16.0.10',
+        subnetMask: '255.255.255.0',
+        gateway: '198.51.100.2',
+        mac: '00:AA:BB:CC:DD:10',
+        x: 540,
+        y: 160,
+        on: true,
+        services: { http: true },
+      },
+      {
+        id: 'n_k8s_db',
+        type: 'server_db',
+        name: 'Betalningsdatabas SQL (K8s)',
+        ip: '172.16.0.88',
+        subnetMask: '255.255.255.0',
+        gateway: '172.16.0.10',
+        mac: '00:AA:BB:CC:DD:88',
+        x: 780,
+        y: 160,
+        on: true,
+      },
+      {
+        id: 'n_client_shopper',
+        type: 'client_mobile',
+        name: 'Slutanvändare Mobil App',
+        ip: '198.51.100.55',
+        subnetMask: '255.255.255.0',
+        gateway: '198.51.100.1',
+        mac: '00:AA:BB:CC:DD:55',
+        x: 100,
+        y: 420,
+        on: true,
+      },
+    ],
+    initialLinks: [
+      { id: 'l1', a: 'n_wan_inet', b: 'n_fw_waf', type: 'fiber', bandwidthMbps: 1000, latencyMs: 2, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l2', a: 'n_fw_waf', b: 'n_k8s_ingress', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l3', a: 'n_k8s_ingress', b: 'n_k8s_db', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l4', a: 'n_wan_inet', b: 'n_client_shopper', type: 'wifi', bandwidthMbps: 300, latencyMs: 5, packetLossPercent: 0, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Konfigurera WAF/NGFW med en regel som tillåter ("allow") HTTP/HTTPS-trafik till Ingress Gateway (172.16.0.10).',
+        hint: 'Öppna WAF/NGFW och lägg till: Action: Allow, Dest IP: 172.16.0.10, Protocol: HTTP (eller port 80/443).',
+      },
+      {
+        id: 't2',
+        description: 'Lägg till en regel i brandväggen som blockerar ("block") direkt trafik till Databasen (172.16.0.88).',
+        hint: 'Skapa en regel: Action: Block, Dest IP: 172.16.0.88 i WAF/NGFW.',
+      },
+      {
+        id: 't3',
+        description: 'Säkerställ att K8s Ingress API Gateway och Betalningsdatabas SQL båda är online.',
+        hint: 'Verifiera att noderna är påslagna med aktiva webbtjänster på API Gateway.',
+      },
+    ],
+    validateSolution: (nodes) => {
+      const fw = nodes.find((n) => n.id === 'n_fw_waf');
+      const ingress = nodes.find((n) => n.id === 'n_k8s_ingress');
+      const db = nodes.find((n) => n.id === 'n_k8s_db');
+
+      const rules = fw?.firewallRules || [];
+      const hasAllowIngress = rules.some(
+        (r) =>
+          r.action === 'allow' &&
+          (r.destIp === '172.16.0.10' || r.destIp === '*' || r.protocol === 'HTTP')
+      );
+      const hasBlockDb = rules.some(
+        (r) =>
+          r.action === 'block' &&
+          (r.destIp === '172.16.0.88' || r.port === 5432 || r.port === 3306)
+      );
+
+      const isServicesRunning = ingress?.on !== false && db?.on !== false;
+
+      const isSolved = hasAllowIngress && hasBlockDb && isServicesRunning;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: hasAllowIngress,
+          t2: hasBlockDb,
+          t3: isServicesRunning,
+        },
+        message: isSolved
+          ? 'ZERO-TRUST KUBERNETES ARKITEKTUR SÄKRAD! All inkommande trafik filtreras genom WAF & Ingress Gateway medan databasen är helt isolerad från direkt exponering!'
+          : 'Regelverket är inte komplett. Tillåt trafik till 172.16.0.10 och blockera direkt åtkomst till 172.16.0.88 i brandväggen.',
+      };
+    },
+  },
+  {
+    id: 'sc_23_bgp_anycast_scrubbing',
+    title: '23. BGP Anycast & DDoS Scrubbing Center',
+    category: 'Routing',
+    difficulty: 'expert',
+    estimatedTime: '12-15 min',
+    iconName: 'ShieldAlert',
+    summary: 'Företagets betalväxel utsätts för en massiv 400 Gbps DDoS-attack. Dirigera trafiken genom ett Scrubbing Center.',
+    problemDescription: 'Kriminella aktörer har inlett en förödande DDoS-attack mot Företagets Betalväxel (185.20.10.100) vilket genererar 95% paketförlust på direktlänken. Koppla in BGP DDoS Scrubbing Center mellan WAN och Betalväxeln, aktivera ddos-filtrering mot MALWARE, och återställ paketförlusten på Betalväxelns länk till 0%.',
+    initialNodes: [
+      {
+        id: 'n_wan_transit',
+        type: 'internet',
+        name: 'Global Tier-1 Transit WAN',
+        ip: '198.51.100.1',
+        subnetMask: '255.255.255.0',
+        gateway: '',
+        mac: '00:CC:DD:EE:FF:01',
+        x: 100,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_scrubbing_center',
+        type: 'firewall',
+        name: 'BGP Scrubbing Center NGFW',
+        ip: '185.20.10.1',
+        subnetMask: '255.255.255.0',
+        gateway: '198.51.100.1',
+        mac: '00:CC:DD:EE:FF:02',
+        x: 360,
+        y: 380,
+        on: true,
+        firewallRules: [], // SAKNAR FILTRERINGSREGEL!
+      },
+      {
+        id: 'n_sw_payment',
+        type: 'switch',
+        name: 'Betalväxel Switch',
+        ip: '185.20.10.2',
+        subnetMask: '255.255.255.0',
+        gateway: '185.20.10.1',
+        mac: '00:CC:DD:EE:FF:03',
+        x: 620,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_srv_payment',
+        type: 'server_web',
+        name: 'Kritisk Betalväxel Server',
+        ip: '185.20.10.100',
+        subnetMask: '255.255.255.0',
+        gateway: '185.20.10.1',
+        mac: '00:CC:DD:EE:FF:10',
+        x: 880,
+        y: 260,
+        on: true,
+        services: { http: true },
+      },
+    ],
+    initialLinks: [
+      { id: 'l_ddos_direct', a: 'n_wan_transit', b: 'n_sw_payment', type: 'fiber', bandwidthMbps: 10000, latencyMs: 2, packetLossPercent: 95, duplex: 'full' }, // ATTACKERAD DIREKTLÄNK!
+      { id: 'l_sw_srv', a: 'n_sw_payment', b: 'n_srv_payment', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 90, duplex: 'full' },
+      { id: 'l_wan_scrub', a: 'n_wan_transit', b: 'n_scrubbing_center', type: 'fiber', bandwidthMbps: 10000, latencyMs: 2, packetLossPercent: 0, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Anslut BGP Scrubbing Center NGFW till Betalväxel Switch med en Fiber- eller Cat6-kabel.',
+        hint: 'Skapa en länk mellan Scrubbing Center och Betalväxel Switch.',
+      },
+      {
+        id: 't2',
+        description: 'Skapa en filtreringsregel i BGP Scrubbing Center NGFW som blockerar ("block") protokollet "MALWARE".',
+        hint: 'Klicka på Scrubbing Center och lägg till Action: Block, Protocol: MALWARE.',
+      },
+      {
+        id: 't3',
+        description: 'Återställ paketförlusten på länkarna till 0% och säkerställ att Betalväxel Server är online.',
+        hint: 'Inspektera länkarna och sätt Paketförlust till 0%.',
+      },
+    ],
+    validateSolution: (nodes, links) => {
+      const fw = nodes.find((n) => n.id === 'n_scrubbing_center');
+      const srv = nodes.find((n) => n.id === 'n_srv_payment');
+
+      const isScrubLinkedToSwitch = links.some(
+        (l) =>
+          (l.a === 'n_scrubbing_center' && l.b === 'n_sw_payment') ||
+          (l.a === 'n_sw_payment' && l.b === 'n_scrubbing_center')
+      );
+
+      const hasBlockRule = Boolean(
+        fw?.firewallRules?.some((r) => r.action === 'block' && (r.protocol === 'MALWARE' || r.protocol === 'UDP'))
+      );
+
+      const isPacketLossClean = links.every((l) => (l.packetLossPercent || 0) === 0);
+      const isSrvOnline = srv?.on !== false;
+
+      const isSolved = isScrubLinkedToSwitch && hasBlockRule && isPacketLossClean && isSrvOnline;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: isScrubLinkedToSwitch,
+          t2: hasBlockRule,
+          t3: isPacketLossClean && isSrvOnline,
+        },
+        message: isSolved
+          ? 'BGP ANYCAST SCRUBBING AKTIVERAD! 400 Gbps attacken filtreras i realtid av Scrubbing Centret och betaltransaktioner flyter utan förlust!'
+          : 'DDoS-skyddet är inte fullt operativt. Anslut Scrubbing Center till switchen, blockera MALWARE och sätt länkarnas paketförlust till 0%.',
+      };
+    },
+  },
+  {
+    id: 'sc_24_scada_purdue_airgap',
+    title: '24. SCADA OT Industrial Air-Gap & Modbus Säkring',
+    category: 'Felsökning',
+    difficulty: 'expert',
+    estimatedTime: '10-15 min',
+    iconName: 'Cpu',
+    summary: 'Ett kritiskt vattenkraftverk uppvisar otillåten fjärrstyrning via en oisolerad Wi-Fi-brygga in i OT-zonen.',
+    problemDescription: 'I ett vattenkraftverk upptäckte driftledningen att en okänd Wi-Fi AP kopplats in direkt i ställverkets PLC Switch (10.240.1.50). Detta strider mot Purdue Model (Level 1/2) och IEC 62443. Avlägsna eller stäng av den otillåtna Wi-Fi AP:n och konfigurera Industrial OT Firewall mot HMI Styrserver (10.240.1.10).',
+    initialNodes: [
+      {
+        id: 'n_ot_firewall',
+        type: 'firewall',
+        name: 'Industrial OT Diode Firewall',
+        ip: '10.240.1.1',
+        subnetMask: '255.255.255.0',
+        gateway: '',
+        mac: '00:EE:FF:11:22:01',
+        x: 200,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_sw_plc',
+        type: 'switch',
+        name: 'Kraftverk PLC Switch (OT Zon)',
+        ip: '10.240.1.2',
+        subnetMask: '255.255.255.0',
+        gateway: '10.240.1.1',
+        mac: '00:EE:FF:11:22:02',
+        x: 460,
+        y: 260,
+        on: true,
+      },
+      {
+        id: 'n_plc_turbine',
+        type: 'iot_plc',
+        name: 'Vattenkraftverk PLC Turbin 1',
+        ip: '10.240.1.50',
+        subnetMask: '255.255.255.0',
+        gateway: '10.240.1.1',
+        mac: '00:EE:FF:11:22:50',
+        x: 720,
+        y: 160,
+        on: true,
+      },
+      {
+        id: 'n_scada_hmi',
+        type: 'server_web',
+        name: 'SCADA HMI Styrserver',
+        ip: '10.240.1.10',
+        subnetMask: '255.255.255.0',
+        gateway: '10.240.1.1',
+        mac: '00:EE:FF:11:22:10',
+        x: 720,
+        y: 360,
+        on: true,
+        services: { http: true },
+      },
+      {
+        id: 'n_rogue_ot_wifi',
+        type: 'wifi_ap',
+        name: 'Otillåten Rouge Wi-Fi AP',
+        ip: '10.240.1.99',
+        subnetMask: '255.255.255.0',
+        gateway: '10.240.1.1',
+        mac: '00:66:66:66:66:99',
+        x: 460,
+        y: 440,
+        on: true, // OTILLÅTEN ENHET I DRIFT!
+      },
+    ],
+    initialLinks: [
+      { id: 'l1', a: 'n_ot_firewall', b: 'n_sw_plc', type: 'fiber', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l2', a: 'n_sw_plc', b: 'n_plc_turbine', type: 'cat6', bandwidthMbps: 100, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l3', a: 'n_sw_plc', b: 'n_scada_hmi', type: 'cat6', bandwidthMbps: 1000, latencyMs: 1, packetLossPercent: 0, duplex: 'full' },
+      { id: 'l_rogue', a: 'n_sw_plc', b: 'n_rogue_ot_wifi', type: 'cat6', bandwidthMbps: 100, latencyMs: 2, packetLossPercent: 0, duplex: 'full' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        description: 'Stäng av eller koppla ur den "Otillåtna Rouge Wi-Fi AP"-enheten.',
+        hint: 'Klicka på Otillåten Rouge Wi-Fi AP och slå av strömmen (Power Off) eller ta bort kabeln.',
+      },
+      {
+        id: 't2',
+        description: 'Säkerställ att Vattenkraftverk PLC Turbin 1 och SCADA HMI Styrserver är online och anslutna till PLC Switchen.',
+        hint: 'Kontrollera att PLC Turbin 1 och HMI-servern har ström påslagen och fungerande länkar.',
+      },
+      {
+        id: 't3',
+        description: 'Säkerställ att Industrial OT Diode Firewall är aktiv med Gateway 10.240.1.1.',
+        hint: 'Se till att brandväggen är online.',
+      },
+    ],
+    validateSolution: (nodes, links) => {
+      const rogue = nodes.find((n) => n.id === 'n_rogue_ot_wifi');
+      const plc = nodes.find((n) => n.id === 'n_plc_turbine');
+      const hmi = nodes.find((n) => n.id === 'n_scada_hmi');
+      const fw = nodes.find((n) => n.id === 'n_ot_firewall');
+
+      const isRogueDisabled =
+        rogue?.on === false ||
+        !links.some((l) => l.a === 'n_rogue_ot_wifi' || l.b === 'n_rogue_ot_wifi');
+
+      const isPlcAndHmiUp = plc?.on !== false && hmi?.on !== false;
+      const isFwUp = fw?.on !== false;
+
+      const isSolved = isRogueDisabled && isPlcAndHmiUp && isFwUp;
+
+      return {
+        isSolved,
+        taskStatuses: {
+          t1: isRogueDisabled,
+          t2: isPlcAndHmiUp,
+          t3: isFwUp,
+        },
+        message: isSolved
+          ? 'OT AIR-GAP ÅTERSTÄLLT! Den otillåtna accesspunkten har eliminerats och vattenkraftverkets PLC och SCADA HMI är helt säkrade enligt Purdue Model!'
+          : 'OT-zonen är fortfarande sårbar. Stäng av eller koppla ur den otillåtna Wi-Fi AP:n och säkerställ att PLC och HMI är online.',
+      };
+    },
+  },
 ];
 

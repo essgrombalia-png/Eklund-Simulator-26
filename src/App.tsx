@@ -20,6 +20,7 @@ import { ScenarioModal } from './components/ScenarioModal';
 import { ScenarioBanner } from './components/ScenarioBanner';
 import { LandingPage } from './components/LandingPage';
 import { MatrixRain } from './components/MatrixRain';
+import { SettingsModal } from './components/SettingsModal';
 import { SCENARIOS } from './data/scenarios';
 import { PROBLEM_SCENARIOS } from './data/problemScenarios';
 import {
@@ -32,7 +33,17 @@ import {
   CapturedPacket,
   NetworkContainer,
   IncidentLog,
+  AdvancedSettings,
+  UserProfile,
+  SimulatorThemeId,
 } from './types';
+import {
+  loadSavedSettings,
+  saveSettingsToStorage,
+  loadSavedProfile,
+  saveProfileToStorage,
+  SIMULATOR_THEMES,
+} from './utils/themeManager';
 import {
   createIncidentFromPacket,
   generateInitialIncidentLogs,
@@ -77,6 +88,33 @@ export default function App() {
       return null;
     }
   });
+
+  // Advanced Settings & Theme State
+  const [settings, setSettings] = useState<AdvancedSettings>(() => loadSavedSettings());
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() =>
+    currentUser ? loadSavedProfile(currentUser.email) : null
+  );
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const handleUpdateSettings = (updated: AdvancedSettings) => {
+    setSettings(updated);
+    saveSettingsToStorage(updated);
+  };
+
+  const handleUpdateProfile = (updated: UserProfile) => {
+    setUserProfile(updated);
+    saveProfileToStorage(updated);
+  };
+
+  // Sync user profile when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      const p = loadSavedProfile(currentUser.email);
+      setUserProfile(p);
+    } else {
+      setUserProfile(null);
+    }
+  }, [currentUser?.email]);
 
   // History State
   const history = useHistory({
@@ -1186,23 +1224,43 @@ export default function App() {
   const selectedContainer = containers.find((c) => c.id === selectedContainerId) || null;
 
   const onlineCount = nodes.filter((n) => connectivityMap.get(n.id)).length;
+  const activeTheme = SIMULATOR_THEMES[settings.themeId] || SIMULATOR_THEMES.cyber_matrix;
 
   if (!currentUser) {
     return (
       <LandingPage
+        currentSettings={settings}
+        onUpdateSettings={handleUpdateSettings}
         onLoginSuccess={(user) => {
           resetHistory({ nodes: [], links: [], containers: [] });
           setCurrentScenarioId('custom');
           setCurrentUser(user);
+          setUserProfile({
+            username: user.username,
+            email: user.email,
+            avatarId: user.avatarId || 'avatar_cyber_hacker',
+            avatarCustomUrl: user.avatarCustomUrl,
+            roleTitle: user.roleTitle || 'Nätverksarkitekt',
+            statusBadge: 'active',
+          });
         }}
       />
     );
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans relative">
+    <div
+      className="flex flex-col h-screen w-screen text-slate-100 overflow-hidden font-sans relative transition-colors duration-500"
+      style={{ backgroundColor: activeTheme.bgCanvas }}
+    >
       {/* Matrix Digital Code Rain Background Overlay */}
-      <MatrixRain opacity={0.25} speed={1} colorTheme="classic_green" />
+      {settings.matrixRainEnabled && (
+        <MatrixRain
+          opacity={settings.matrixRainOpacity}
+          speed={settings.matrixRainSpeed}
+          colorTheme={activeTheme.matrixTheme}
+        />
+      )}
 
       {/* Top Navigation Header */}
       <Topbar
@@ -1220,6 +1278,7 @@ export default function App() {
         onOpenCyberAwareness={() => setShowCyberAwarenessModal(true)}
         onOpenAntivirus={() => setShowAntivirusModal(true)}
         onOpenIncidentResponse={() => setShowIncidentModal(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         incidentCount={incidents.length}
         issueCount={detectedIssues.length}
         onResetDemo={() => {
@@ -1240,6 +1299,9 @@ export default function App() {
         onUndo={undo}
         onRedo={redo}
         currentUser={currentUser}
+        userProfile={userProfile}
+        currentThemeId={settings.themeId}
+        onSelectTheme={(themeId) => handleUpdateSettings({ ...settings, themeId })}
         onLogout={handleLogout}
       />
 
@@ -1273,6 +1335,8 @@ export default function App() {
               links={links}
               containers={containers}
               capturedPackets={capturedPackets}
+              currentThemeId={settings.themeId}
+              isLightMode={activeTheme.isLight}
               selectedNodeId={selectedNodeId}
               selectedNodeIds={selectedNodeIds}
               selectedLinkId={selectedLinkId}
@@ -1644,6 +1708,20 @@ export default function App() {
           setSelectedNodeIds([id]);
         }}
         onOpenAntivirus={() => setShowAntivirusModal(true)}
+      />
+
+      {/* Global Simulator Settings & Profile Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
+        userProfile={userProfile}
+        onUpdateProfile={handleUpdateProfile}
+        currentUserEmail={currentUser?.email}
+        onResetAllSettings={() => {
+          handleUpdateSettings(loadSavedSettings());
+        }}
       />
     </div>
   );

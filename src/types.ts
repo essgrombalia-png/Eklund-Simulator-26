@@ -299,3 +299,90 @@ export interface IncidentLog {
   isContained?: boolean;
   status: 'ACTIVE' | 'CONTAINED' | 'INVESTIGATING';
 }
+
+// ----------------------------------------------------
+// THEMES & CUSTOMIZATION
+// ----------------------------------------------------
+export type SimulatorThemeId =
+  | 'cyber_matrix'
+  | 'midnight_obsidian'
+  | 'clean_enterprise'
+  | 'tactical_terminal'
+  | 'solar_dusk'
+  | 'nordic_glacier'
+  | 'blueprint_light';
+
+export interface ThemeConfig {
+  id: SimulatorThemeId;
+  name: string;
+  tagline: string;
+  isLight?: boolean;
+  bgCanvas: string;
+  bgTopbar: string;
+  bgSidebar: string;
+  accentPrimary: string;
+  accentSecondary: string;
+  borderPrimary: string;
+  gridLineColor: string;
+  gridDotColor: string;
+  nodeGlowColor: string;
+  matrixTheme: 'classic_green' | 'cyber_neon' | 'matrix_dark' | 'amber_gold' | 'ice_blue' | 'purple_haze';
+}
+
+export type CanvasGridStyle = 'dots' | 'lines' | 'hex' | 'blueprint' | 'none';
+
+export type UserStatusBadge = 'active' | 'in_lab' | 'architecting' | 'dnd';
+
+// ----------------------------------------------------
+// USER PROFILE & PREFERENCES
+// ----------------------------------------------------
+export interface UserProfile {
+  email: string;
+  username: string;
+  avatarId?: string; // preset avatar key
+  avatarCustomUrl?: string; // custom upload (data-url) or web image
+  roleTitle?: string; // e.g. "Lead Network Architect", "Cyber SOC Analyst", etc.
+  organization?: string;
+  statusBadge?: UserStatusBadge;
+  bio?: string;
+}
+
+export interface AdvancedSettings {
+  // Appearance & Theme
+  themeId: SimulatorThemeId;
+  canvasGridStyle: CanvasGridStyle;
+  gridSnap: boolean;
+  gridSnapSize: 10 | 20 | 40;
+  matrixRainEnabled: boolean;
+  matrixRainOpacity: number;
+  matrixRainSpeed: number;
+  matrixRainTheme: 'classic_green' | 'cyber_neon' | 'matrix_dark' | 'amber_gold' | 'ice_blue' | 'purple_haze';
+  ambientGlowEnabled: boolean;
+  uiFontTheme: 'modern' | 'mono' | 'cyber';
+
+  // Simulation & Engine
+  packetAnimationSpeed: 0.5 | 1 | 1.5 | 2 | 3;
+  autoSaveIntervalSeconds: 0 | 15 | 30 | 60 | 120;
+  soundEffectsEnabled: boolean;
+  soundVolume: number;
+  showLabelsOnCanvas: boolean;
+  showIpBadgesOnCanvas: boolean;
+  showMacBadgesOnCanvas: boolean;
+  showPortLabelsOnLinks: boolean;
+  showMinimap: 'always' | 'collapsed' | 'hidden';
+  showVisualDebugger: boolean;
+  cableAnimationGlow: boolean;
+
+  // Network Defaults
+  defaultGateway: string;
+  defaultSubnetMask: string;
+  defaultDnsServer: string;
+  defaultCableType: CableType;
+  autoAssignIpOnCreate: boolean;
+
+  // Security Lab
+  hackerAggression: 'low' | 'moderate' | 'aggressive' | 'extreme';
+  autoContainmentOnBreach: boolean;
+  mitreDetailLevel: 'standard' | 'verbose_hex';
+}
+
