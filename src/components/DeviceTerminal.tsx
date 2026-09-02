@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Terminal as TerminalIcon, Play, X, CornerDownLeft, RefreshCw, Cpu } from 'lucide-react';
+import { Terminal as TerminalIcon, Play, X, CornerDownLeft, RefreshCw, Cpu, Trash2 } from 'lucide-react';
 import { Device, Link } from '../types';
 import { findPathAndSimulate } from '../utils/networkEngine';
 
@@ -14,6 +14,7 @@ interface DeviceTerminalProps {
 interface CommandHistory {
   deviceIp: string;
   command: string;
+  prompt: string;
   output: string[];
   type: 'info' | 'success' | 'error';
 }
@@ -29,17 +30,51 @@ export const DeviceTerminal: React.FC<DeviceTerminalProps> = ({
     initialNodeId || (nodes[0] ? nodes[0].id : '')
   );
   const [inputCommand, setInputCommand] = useState('');
+  const [commandHistory, setCommandHistory] = useState<string[]>(['help', 'ipconfig', 'ping 192.168.1.1']);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  const activeDevice = nodes.find((n) => n.id === selectedNodeId);
+
+  // Helper to determine prompt string based on device type
+  const getPromptString = (device?: Device) => {
+    if (!device) return 'sys@eklund:~#';
+    const name = device.name.toLowerCase().replace(/\s+/g, '-');
+    const type = device.type;
+    if (type === 'router' || type === 'wifi_router') {
+      return `${device.name}>`;
+    }
+    if (type === 'switch' || type === 'l3_switch' || type === 'wifi_ap') {
+      return `${device.name}#`;
+    }
+    if (type === 'firewall') {
+      return `${device.name}(config)#`;
+    }
+    if (type.startsWith('server_')) {
+      return `[root@${name} ~]#`;
+    }
+    return `[user@${name} ~]$`;
+  };
+
   const [history, setHistory] = useState<CommandHistory[]>([
     {
       deviceIp: 'SYSTEM',
       command: 'sys_init',
+      prompt: 'sys@eklund:~#',
       output: [
-        '╔════════════════════════════════════════════════════════════════╗',
-        '║  Eklund Simulator 26 Enterprise CLI Engine v26.0               ║',
-        '║  High-Performance Virtual Network Terminal Interface           ║',
-        '╚════════════════════════════════════════════════════════════════╝',
-        'Skriv "help" för att visa tillgängliga nätverkskommandon.',
-        'Kommandon: ping <ip|namn>, traceroute <ip>, ipconfig, nslookup <domän>, nmap <ip>, curl <ip>',
+        '┌────────────────────────────────────────────────────────────────┐',
+        '│  Eklund OS Enterprise CLI Engine v26.4.1-LTS                   │',
+        '│  Secured Network Terminal Sandbox & Virtual IOS Simulation     │',
+        '└────────────────────────────────────────────────────────────────┘',
+        '[OK] Loading microkernel subsystems...',
+        '[OK] Initializing memory management layout (64-bit address space)',
+        '[OK] Mounting devfs, procfs and sysfs directories',
+        '[OK] Launching loopback interface (lo0) on 127.0.0.1/8',
+        '[OK] Cryptography engine: RSA-4096 / AES-256-GCM hardware-accelerated',
+        '[OK] Virtual switchports mapped & Ethernet cabling verified',
+        '[INFO] Welcome back, Administrator. Security auditing level: SEC_LEVEL_HIGH',
+        '',
+        'Skriv "help" för att visa alla tillgängliga nätverkskommandon.',
+        'Snabba kommandon: ping <ip|namn>, traceroute <ip>, ipconfig, nmap <ip>, curl <ip>',
       ],
       type: 'info',
     },
@@ -51,12 +86,54 @@ export const DeviceTerminal: React.FC<DeviceTerminalProps> = ({
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history]);
 
-  const activeDevice = nodes.find((n) => n.id === selectedNodeId);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (commandHistory.length === 0) return;
+      const nextIndex = historyIndex + 1;
+      if (nextIndex < commandHistory.length) {
+        setHistoryIndex(nextIndex);
+        setInputCommand(commandHistory[commandHistory.length - 1 - nextIndex]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIndex = historyIndex - 1;
+      if (nextIndex >= 0) {
+        setHistoryIndex(nextIndex);
+        setInputCommand(commandHistory[commandHistory.length - 1 - nextIndex]);
+      } else {
+        setHistoryIndex(-1);
+        setInputCommand('');
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const availableCmds = ['help', 'ping', 'traceroute', 'ipconfig', 'nslookup', 'nmap', 'curl', 'clear'];
+      const currentVal = inputCommand.trim().toLowerCase();
+      if (!currentVal) return;
+      const match = availableCmds.find(c => c.startsWith(currentVal));
+      if (match) {
+        setInputCommand(match + ' ');
+      }
+    }
+  };
+
+  // Synchronize internal select state when initialNodeId prop updates
+  useEffect(() => {
+    if (initialNodeId) {
+      setSelectedNodeId(initialNodeId);
+    }
+  }, [initialNodeId]);
 
   const handleRunCommand = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cmd = inputCommand.trim();
     if (!cmd || !activeDevice) return;
+
+    setCommandHistory((prev) => {
+      if (prev[prev.length - 1] === cmd) return prev;
+      return [...prev, cmd];
+    });
+    setHistoryIndex(-1);
 
     setInputCommand('');
     const parts = cmd.split(' ');
@@ -263,60 +340,104 @@ export const DeviceTerminal: React.FC<DeviceTerminalProps> = ({
       {
         deviceIp: activeDevice.ip || activeDevice.name,
         command: cmd,
+        prompt: getPromptString(activeDevice),
         output: newLogs,
         type: logType,
       },
     ]);
   };
 
+  const currentPrompt = getPromptString(activeDevice);
+
+  // CPU utilization metrics simulation for UI realism
+  const getSimulatedCpu = () => {
+    if (!activeDevice) return '0%';
+    if (!activeDevice.on) return 'OFFLINE';
+    // Base loads based on device type
+    const base = activeDevice.type.startsWith('server') ? 12 : activeDevice.type === 'firewall' ? 8 : 2;
+    const randomShift = Math.floor(Math.random() * 5);
+    return `${base + randomShift}%`;
+  };
+
   return (
-    <div className="flex flex-col h-full bg-slate-950 font-mono text-xs select-text">
-      {/* Top Device Switcher Bar */}
-      <div className="bg-slate-900 border-b border-slate-800 p-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <TerminalIcon className="w-4 h-4 text-cyan-400" />
-          <span className="font-bold text-slate-200 text-sm font-sans">
-            Enhets-CLI Terminal
-          </span>
+    <div className="flex flex-col h-full bg-slate-950 font-mono text-xs select-text border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      {/* Top Professional Window Header */}
+      <div className="bg-slate-900 border-b border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md">
+        {/* Virtual Terminal Tab Icon / OS dots */}
+        <div className="flex items-center gap-3">
+          {/* OS-Style Action Dots */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-600/30 block shadow-inner" />
+            <span className="w-3 h-3 rounded-full bg-amber-500/80 border border-amber-600/30 block shadow-inner" />
+            <span className="w-3 h-3 rounded-full bg-emerald-500/80 border border-emerald-600/30 block shadow-inner" />
+          </div>
+          <span className="text-slate-500 text-xs px-1">|</span>
+          <div className="flex items-center gap-2">
+            <TerminalIcon className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-bold text-slate-200 text-xs font-sans tracking-wide">
+              CLI Console Session
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-slate-400 font-sans text-xs">Aktiv Enhet:</label>
-          <select
-            value={selectedNodeId}
-            onChange={(e) => setSelectedNodeId(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-sans text-xs"
+        {/* Info badges */}
+        <div className="flex items-center gap-3">
+          {activeDevice && activeDevice.on && (
+            <div className="hidden sm:flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-md border border-slate-800 text-[10px] text-slate-400 font-sans">
+              <Cpu className="w-3 h-3 text-cyan-400 animate-pulse" />
+              <span>LOAD: <strong className="text-cyan-300 font-mono">{getSimulatedCpu()}</strong></span>
+            </div>
+          )}
+
+          {/* Wipe button */}
+          <button
+            onClick={() => setHistory([])}
+            title="Rensa skärmen"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800/60 text-slate-400 hover:text-slate-100 transition text-[10px] font-sans cursor-pointer"
           >
-            {nodes.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.name} ({n.ip || 'Ingen IP'})
-              </option>
-            ))}
-          </select>
+            <Trash2 className="w-3 h-3" />
+            <span>Rensa</span>
+          </button>
+
+          {/* Switcher */}
+          <div className="flex items-center gap-2 bg-slate-950/60 pl-2.5 pr-1.5 py-0.5 rounded-lg border border-slate-800/80">
+            <label className="text-slate-400 font-sans text-[11px] font-medium">Aktiv Enhet:</label>
+            <select
+              value={selectedNodeId}
+              onChange={(e) => setSelectedNodeId(e.target.value)}
+              className="bg-slate-900 border-0 text-slate-100 rounded focus:outline-none focus:ring-1 focus:ring-cyan-500/30 font-sans text-xs py-1.5 px-2 cursor-pointer font-semibold"
+            >
+              {nodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.name} ({n.ip || 'DHCP'})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Terminal History Log Window */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-slate-950 text-slate-300">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-950/95 text-slate-300 scrollbar-thin scrollbar-thumb-slate-800 leading-relaxed">
         {history.map((item, index) => (
-          <div key={index} className="space-y-1">
+          <div key={index} className="space-y-1.5">
             <div className="flex items-center gap-2 text-slate-400">
-              <span className="text-cyan-400 font-bold">
-                root@{item.deviceIp}:~$
+              <span className="text-cyan-400 font-bold font-mono">
+                {item.prompt}
               </span>
               <span className="text-slate-100 font-semibold">{item.command}</span>
             </div>
             <div
               className={`pl-4 border-l-2 text-xs leading-relaxed ${
                 item.type === 'success'
-                  ? 'border-emerald-500/50 text-emerald-300'
+                  ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/[0.02] py-1 pr-2 rounded-r'
                   : item.type === 'error'
-                  ? 'border-rose-500/50 text-rose-300'
-                  : 'border-slate-700 text-slate-300'
+                  ? 'border-rose-500/50 text-rose-400 bg-rose-500/[0.02] py-1 pr-2 rounded-r'
+                  : 'border-slate-800 text-slate-300 bg-slate-900/[0.01]'
               }`}
             >
               {item.output.map((line, lIdx) => (
-                <div key={lIdx} className="whitespace-pre-wrap">
+                <div key={lIdx} className="whitespace-pre-wrap font-mono">
                   {line}
                 </div>
               ))}
@@ -329,23 +450,29 @@ export const DeviceTerminal: React.FC<DeviceTerminalProps> = ({
       {/* Input Prompt */}
       <form
         onSubmit={handleRunCommand}
-        className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2"
+        className="p-4 bg-slate-900/80 border-t border-slate-800/90 flex items-center gap-2.5"
       >
-        <span className="text-cyan-400 font-bold">
-          root@{activeDevice?.ip || 'prompt'}:~$
+        <span className="text-cyan-400 font-bold font-mono select-none">
+          {currentPrompt}
         </span>
-        <input
-          type="text"
-          value={inputCommand}
-          onChange={(e) => setInputCommand(e.target.value)}
-          placeholder="Skriv ett kommando (t.ex. ping 192.168.10.50, help, ipconfig)..."
-          className="flex-1 bg-transparent text-slate-100 focus:outline-none placeholder-slate-600 font-mono text-xs"
-        />
+        <div className="flex-1 flex items-center relative">
+          <input
+            type="text"
+            value={inputCommand}
+            onChange={(e) => setInputCommand(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Skriv ett kommando (t.ex. ping, help, ipconfig, traceroute)..."
+            className="w-full bg-transparent text-slate-100 focus:outline-none placeholder-slate-600 font-mono text-xs pr-4 border-0 focus:ring-0"
+            autoFocus
+          />
+          <span className="absolute right-0 w-1.5 h-3.5 bg-cyan-400 animate-pulse pointer-events-none" />
+        </div>
         <button
           type="submit"
-          className="p-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition"
+          className="p-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition flex items-center justify-center cursor-pointer shadow-md shadow-cyan-500/10 active:scale-95"
+          title="Kör kommando"
         >
-          <CornerDownLeft className="w-4 h-4" />
+          <CornerDownLeft className="w-3.5 h-3.5" />
         </button>
       </form>
     </div>

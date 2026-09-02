@@ -19,7 +19,7 @@ interface StickyNoteCardProps {
   zoom: number;
   onUpdate: (note: StickyNote) => void;
   onDelete: (id: string) => void;
-  onDragStart: (e: React.MouseEvent, noteId: string) => void;
+  onDragStart: (e: React.MouseEvent | React.TouchEvent, noteId: string) => void;
 }
 
 const COLOR_STYLES: Record<
@@ -200,6 +200,11 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
       {/* Header / Drag Bar */}
       <div
         onMouseDown={(e) => {
+          if (!note.isPinned) {
+            onDragStart(e, note.id);
+          }
+        }}
+        onTouchStart={(e) => {
           if (!note.isPinned) {
             onDragStart(e, note.id);
           }

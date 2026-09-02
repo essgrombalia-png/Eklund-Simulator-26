@@ -742,15 +742,77 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
     };
 
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 0 || !containerRef.current) return;
+      const touch = e.touches[0];
+      const wasInteracting = isPanningRef.current || draggingNodeIdRef.current || draggingContainerIdRef.current || draggingNoteIdRef.current;
+      if (wasInteracting) {
+        e.preventDefault();
+      }
+      const fakeEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => {},
+      } as unknown as MouseEvent;
+      handleGlobalMouseMove(fakeEvent);
+    };
+
+    const handleGlobalTouchEnd = (e: TouchEvent) => {
+      const touch = e.changedTouches[0];
+      if (touch) {
+        const fakeEvent = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+        } as unknown as MouseEvent;
+        handleGlobalMouseUp(fakeEvent);
+      } else {
+        handleGlobalMouseUp({ clientX: 0, clientY: 0 } as unknown as MouseEvent);
+      }
+    };
+
     window.addEventListener('mousemove', handleGlobalMouseMove);
     window.addEventListener('mouseup', handleGlobalMouseUp);
     window.addEventListener('keydown', handleGlobalKeyDown);
+    window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    window.addEventListener('touchend', handleGlobalTouchEnd);
     return () => {
       window.removeEventListener('mousemove', handleGlobalMouseMove);
       window.removeEventListener('mouseup', handleGlobalMouseUp);
       window.removeEventListener('keydown', handleGlobalKeyDown);
+      window.removeEventListener('touchmove', handleGlobalTouchMove);
+      window.removeEventListener('touchend', handleGlobalTouchEnd);
     };
   }, [onMultiSelectNodes]);
+
+  // Auto-center selected node if it's out of viewport bounds (or selected via search)
+  useEffect(() => {
+    if (!selectedNodeId || !containerRef.current || draggingNodeId) return;
+    const node = nodes.find((n) => n.id === selectedNodeId);
+    if (!node) return;
+
+    // We do a small timeout to let any mounting or rendering happen
+    const timer = setTimeout(() => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const screenX = node.x * zoom + pan.x;
+      const screenY = node.y * zoom + pan.y;
+
+      const isOutOfBounds =
+        screenX < 100 ||
+        screenX > rect.width - 100 ||
+        screenY < 100 ||
+        screenY > rect.height - 100;
+
+      if (isOutOfBounds) {
+        setPan({
+          x: rect.width / 2 - node.x * zoom,
+          y: rect.height / 2 - node.y * zoom,
+        });
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [selectedNodeId, zoom, nodes, draggingNodeId]);
 
   // Canvas Drag & Drop from Palette
   const handleDragOver = (e: React.DragEvent) => {
@@ -943,12 +1005,27 @@ export const Canvas: React.FC<CanvasProps> = ({
     onUpdateMultipleNodePositions(updates);
   };
 
+  const handleCanvasTouchStart = (e: React.TouchEvent) => {
+    if (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'svg') {
+      const touch = e.touches[0];
+      if (touch) {
+        onSelectNode(null);
+        onSelectLink(null);
+        if (onSelectContainer) onSelectContainer(null);
+        if (onMultiSelectNodes) onMultiSelectNodes([]);
+        setIsPanning(true);
+        setPanStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+      }
+    }
+  };
+
   return (
     <div
       ref={containerRef}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onMouseDown={handleCanvasMouseDown}
+      onTouchStart={handleCanvasTouchStart}
       onWheel={handleWheel}
       className="relative flex-1 h-full bg-slate-950 overflow-hidden cursor-crosshair select-none"
       style={getCanvasBackground()}
@@ -1886,6 +1963,20 @@ export const Canvas: React.FC<CanvasProps> = ({
                   if (onSelectContainer) onSelectContainer(c.id);
                   onDragStart?.();
                 }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  const touch = e.touches[0];
+                  if (touch) {
+                    setDraggingContainerId(c.id);
+                    setContainerDragStart({
+                      mouseX: touch.clientX,
+                      mouseY: touch.clientY,
+                      initialPositions: memberNodes.map((n) => ({ id: n.id, x: n.x, y: n.y })),
+                    });
+                    if (onSelectContainer) onSelectContainer(c.id);
+                    onDragStart?.();
+                  }
+                }}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${theme.headerBg} border ${theme.headerBorder} shadow-lg backdrop-blur-md cursor-move group hover:scale-[1.02] transition-transform`}
               >
                 <IconComp className={`w-3.5 h-3.5 ${theme.text}`} />
@@ -2083,6 +2174,16 @@ export const Canvas: React.FC<CanvasProps> = ({
                   setDragOffset({ x: 0, y: 0 });
                   onDragStart?.();
                 }
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                onSelectNode(node.id);
+                if (onMultiSelectNodes && !selectedNodeIds.includes(node.id)) {
+                  onMultiSelectNodes([node.id]);
+                }
+                setDraggingNodeId(node.id);
+                setDragOffset({ x: 0, y: 0 });
+                onDragStart?.();
               }}
               className="z-10 group select-none cursor-pointer"
             >
@@ -2374,8 +2475,10 @@ export const Canvas: React.FC<CanvasProps> = ({
               e.stopPropagation();
               if (!containerRef.current) return;
               const rect = containerRef.current.getBoundingClientRect();
-              const mouseCanvasX = (e.clientX - rect.left - pan.x) / zoom;
-              const mouseCanvasY = (e.clientY - rect.top - pan.y) / zoom;
+              const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+              const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+              const mouseCanvasX = (clientX - rect.left - pan.x) / zoom;
+              const mouseCanvasY = (clientY - rect.top - pan.y) / zoom;
               setDraggingNoteId(noteId);
               setNoteDragOffset({
                 x: mouseCanvasX - note.x,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Activity,
   Terminal,
@@ -29,8 +29,10 @@ import {
   AlertTriangle,
   FolderOpen,
   Layers,
+  Search,
+  X,
 } from 'lucide-react';
-import { ScenarioPreset, UserProfile, SimulatorThemeId } from '../types';
+import { ScenarioPreset, UserProfile, SimulatorThemeId, Device } from '../types';
 import { SCENARIOS } from '../data/scenarios';
 import { PROBLEM_SCENARIOS } from '../data/problemScenarios';
 import { EklundLogo } from './EklundLogo';
@@ -76,6 +78,8 @@ interface TopbarProps {
   currentThemeId?: SimulatorThemeId;
   onSelectTheme?: (themeId: SimulatorThemeId) => void;
   onLogout?: () => void;
+  nodes?: Device[];
+  onSelectNode?: (nodeId: string) => void;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -116,6 +120,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   userProfile = null,
   currentThemeId = 'cyber_matrix',
   onLogout,
+  nodes = [],
+  onSelectNode,
 }) => {
   const activeTheme = SIMULATOR_THEMES[currentThemeId] || SIMULATOR_THEMES.cyber_matrix;
 
@@ -124,11 +130,14 @@ export const Topbar: React.FC<TopbarProps> = ({
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
 
   const securityMenuRef = useRef<HTMLDivElement>(null);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Close menus on click outside
   useEffect(() => {
@@ -145,10 +154,24 @@ export const Topbar: React.FC<TopbarProps> = ({
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setSearchDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const filteredNodes = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return [];
+    return nodes.filter((node) => {
+      const nameMatch = (node.name || '').toLowerCase().includes(q);
+      const ipMatch = (node.ip || '').toLowerCase().includes(q);
+      const macMatch = (node.mac || '').toLowerCase().includes(q);
+      return nameMatch || ipMatch || macMatch;
+    });
+  }, [nodes, searchQuery]);
 
   const totalThreats = incidentCount + (issueCount > 0 ? issueCount : 0);
 
@@ -228,6 +251,118 @@ export const Topbar: React.FC<TopbarProps> = ({
             </select>
             <ChevronDown className="w-3 h-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
+        </div>
+
+        {/* --- DYNAMIC SEARCH BAR --- */}
+        <div className="relative hidden md:block" ref={searchContainerRef}>
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchDropdownOpen(true);
+              }}
+              onFocus={() => setSearchDropdownOpen(true)}
+              placeholder="Sök nod (namn, IP, MAC)..."
+              className="bg-slate-900 hover:bg-slate-850 border border-slate-800 focus:border-cyan-500/80 rounded-lg text-xs pl-8 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all duration-200 w-44 lg:w-52 focus:w-60 text-slate-200 placeholder-slate-500 shadow-inner"
+            />
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchDropdownOpen(false);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition"
+                title="Rensa sökning"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Search Dropdown Panel */}
+          {searchDropdownOpen && searchQuery.trim() !== '' && (
+            <div className="absolute left-0 mt-1.5 w-72 max-h-64 overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-slate-800">
+              <div className="px-2 py-1 border-b border-slate-800/60 mb-1 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <span>Sökresultat</span>
+                <span className="font-mono text-cyan-400/80">{filteredNodes.length} funna</span>
+              </div>
+
+              {filteredNodes.length === 0 ? (
+                <div className="text-center py-4 text-xs text-slate-500 font-medium">
+                  Inga enheter matchar "{searchQuery}"
+                </div>
+              ) : (
+                filteredNodes.map((node) => {
+                  const isServer = node.type.startsWith('server_');
+                  const isClient = node.type.startsWith('client_');
+                  const isIoT = node.type.startsWith('iot_');
+                  const isNetwork = ['switch', 'l3_switch', 'wifi_ap'].includes(node.type);
+                  const isRouter = ['router', 'wifi_router'].includes(node.type);
+                  const isFirewall = node.type === 'firewall';
+                  const isHacker = node.type.startsWith('hacker');
+
+                  const categoryColor = isHacker
+                    ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]'
+                    : isFirewall
+                    ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]'
+                    : isServer
+                    ? 'bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.7)]'
+                    : isRouter
+                    ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]'
+                    : isNetwork
+                    ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]'
+                    : isIoT
+                    ? 'bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.7)]'
+                    : 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]';
+
+                  const deviceLabel = node.type.toUpperCase().replace('_', ' ');
+
+                  return (
+                    <button
+                      key={node.id}
+                      onClick={() => {
+                        if (onSelectNode) {
+                          onSelectNode(node.id);
+                        }
+                        setActiveTab('canvas');
+                        setSearchQuery('');
+                        setSearchDropdownOpen(false);
+                      }}
+                      className="w-full text-left flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-900/80 border border-transparent hover:border-slate-800 transition cursor-pointer group"
+                    >
+                      <div className="pt-1.5 shrink-0">
+                        <span className={`block w-2.5 h-2.5 rounded-full ${categoryColor}`} />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="font-semibold text-xs text-slate-200 group-hover:text-cyan-300 transition truncate">
+                            {node.name}
+                          </span>
+                          <span className="text-[8px] font-mono font-bold text-slate-500 bg-slate-900 px-1 py-0.2 rounded border border-slate-800 shrink-0">
+                            {deviceLabel}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-0.2 text-[10px] font-mono text-slate-400 leading-normal">
+                          <span className="flex items-center gap-1">
+                            <span className="text-slate-600">IP:</span>
+                            <span className="text-slate-300 font-semibold">{node.ip || 'DHCP'}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="text-slate-600">MAC:</span>
+                            <span className="text-slate-400">{node.mac || 'N/A'}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       </div>
 

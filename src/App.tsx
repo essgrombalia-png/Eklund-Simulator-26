@@ -76,7 +76,7 @@ import {
   isHackerDevice,
 } from './utils/hackerEngine';
 import { optimizeNetworkLayout } from './utils/d3Layout';
-import { Play, ArrowRight, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles, Zap, Wrench, Skull, ShieldAlert } from 'lucide-react';
+import { Play, ArrowRight, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles, Zap, Wrench, Skull, ShieldAlert, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useHistory } from './hooks/useHistory';
 import { useRef } from 'react';
 
@@ -316,6 +316,10 @@ export default function App() {
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [activeCableType, setActiveCableType] = useState<CableType>('auto');
+
+  const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
+  });
 
   const [activeTab, setActiveTab] = useState<'canvas' | 'terminal' | 'packets' | 'traffic' | 'stats'>('canvas');
 
@@ -1368,18 +1372,46 @@ export default function App() {
         currentThemeId={settings.themeId}
         onSelectTheme={(themeId) => handleUpdateSettings({ ...settings, themeId })}
         onLogout={handleLogout}
+        nodes={nodes}
+        onSelectNode={(id) => {
+          setSelectedNodeId(id);
+          setSelectedNodeIds(id ? [id] : []);
+          if (id) {
+            setSelectedLinkId(null);
+            setSelectedContainerId(null);
+          }
+        }}
       />
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Palette */}
         {activeTab === 'canvas' && (
-          <Palette
-            onAddDevice={handleAddDevice}
-            onAddStickyNote={handleAddStickyNote}
-            activeCableType={activeCableType}
-            onSelectCableType={setActiveCableType}
-          />
+          <div className={`transition-all duration-300 ease-in-out flex shrink-0 ${
+            isPaletteCollapsed 
+              ? 'w-0 -translate-x-full absolute md:relative z-40' 
+              : 'w-72 translate-x-0 absolute md:static z-40 h-full'
+          }`}>
+            <Palette
+              onAddDevice={handleAddDevice}
+              onAddStickyNote={handleAddStickyNote}
+              activeCableType={activeCableType}
+              onSelectCableType={setActiveCableType}
+              isCollapsed={isPaletteCollapsed}
+              onToggleCollapse={() => setIsPaletteCollapsed((prev) => !prev)}
+            />
+          </div>
+        )}
+
+        {/* Floating Palette Trigger when Collapsed */}
+        {activeTab === 'canvas' && isPaletteCollapsed && (
+          <button
+            onClick={() => setIsPaletteCollapsed(false)}
+            className="absolute left-3 top-3 z-30 p-2.5 rounded-xl bg-slate-900/95 backdrop-blur-md border border-slate-800 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 shadow-lg shadow-black/40 transition-all flex items-center justify-center cursor-pointer group hover:scale-105 active:scale-95"
+            title="Visa enhetspalett"
+          >
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+          </button>
         )}
 
         {/* Center Viewport */}

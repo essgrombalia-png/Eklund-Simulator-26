@@ -21,6 +21,7 @@ import {
   Globe,
   SlidersHorizontal,
   ChevronDown,
+  ChevronLeft,
   StickyNote as StickyNoteIcon,
   Plus,
 } from 'lucide-react';
@@ -529,6 +530,8 @@ interface PaletteProps {
   onAddStickyNote?: (x?: number, y?: number, text?: string, color?: StickyNoteColor) => void;
   activeCableType?: CableType;
   onSelectCableType?: (type: CableType) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export const Palette: React.FC<PaletteProps> = ({
@@ -536,6 +539,8 @@ export const Palette: React.FC<PaletteProps> = ({
   onAddStickyNote,
   activeCableType = 'auto',
   onSelectCableType,
+  isCollapsed,
+  onToggleCollapse,
 }) => {
   const [activeTab, setActiveTab] = useState<'devices' | 'cables'>('devices');
   const [searchQuery, setSearchQuery] = useState('');
@@ -563,7 +568,7 @@ export const Palette: React.FC<PaletteProps> = ({
   }, [searchQuery, selectedCategory]);
 
   return (
-    <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-hidden shrink-0 select-none shadow-xl z-10">
+    <aside className="w-full bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-hidden select-none shadow-xl z-10">
       {/* Header & Tab Switcher */}
       <div className="p-3 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md space-y-2.5">
         <div className="flex items-center justify-between">
@@ -571,9 +576,21 @@ export const Palette: React.FC<PaletteProps> = ({
             <Cpu className="w-4 h-4 text-cyan-400" />
             <span>Nätverksverktyg</span>
           </h2>
-          <span className="text-[10px] font-orbitron font-extrabold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/30 tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-            E26-Enterprise
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-orbitron font-extrabold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/30 tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+              E26
+            </span>
+            {onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+                title="Göm enhetspalett"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tab Buttons */}
