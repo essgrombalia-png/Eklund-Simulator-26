@@ -1,4 +1,5 @@
 import { Device, Link, CapturedPacket, NetworkContainer, IotRule } from '../types';
+import { createCapturePacket } from './networkEngine';
 
 export const isHackerDevice = (type?: string): boolean => {
   if (!type) return false;
@@ -31,7 +32,9 @@ export interface AttackProfileDef {
     | 'ransomware'
     | 'zero_day'
     | 'dns_poison'
-    | 'autonomous_ai';
+    | 'autonomous_ai'
+    | 'server_crash'
+    | 'worm_outbreak';
   name: string;
   shortDesc: string;
   badge: string;
@@ -54,6 +57,30 @@ export const ATTACK_PROFILES: Record<string, AttackProfileDef> = {
     color: '#8b5cf6',
     secondaryColor: '#c084fc',
     glowId: 'glow-purple',
+    threatLevel: 'APOCALYPTIC',
+  },
+  server_crash: {
+    id: 'server_crash',
+    name: 'Server Crash & Shutdown (DoS RCE)',
+    shortDesc: 'Skickar kernel panic exploit och tvingar servern offline (tar ned enheten)',
+    badge: 'KILL SWITCH',
+    icon: '💥',
+    protocol: 'MALWARE',
+    color: '#e11d48',
+    secondaryColor: '#fda4af',
+    glowId: 'glow-red',
+    threatLevel: 'CRITICAL',
+  },
+  worm_outbreak: {
+    id: 'worm_outbreak',
+    name: 'Nätverksmask / Globalt Virus',
+    shortDesc: 'Självreplikerande mask som sprids automatiskt och infekterar alla enheter',
+    badge: 'WORM VIRUS',
+    icon: '🦠',
+    protocol: 'MALWARE',
+    color: '#10b981',
+    secondaryColor: '#6ee7b7',
+    glowId: 'glow-green',
     threatLevel: 'APOCALYPTIC',
   },
   zero_day: {
@@ -397,6 +424,28 @@ export function generateAttackDetails(
       };
     }
 
+    case 'server_crash': {
+      return {
+        protocol: 'MALWARE',
+        info: `${stealthPrefix}Server Crash Exploit: Skickar remote kernel panic / crash payload mot "${target.name}" (${target.ip}). Tvingar servern offline!`,
+        payloadSummary: 'Crash Exploit: \\xff\\x00\\x7f Kernel-Panic RCE Trigger + SysRq-c Force-Reboot/Shutdown Kill-Signal',
+        isBreach: isSuccess,
+        alertTitle: 'SERVER KRACHAD & TAGEN OFFLINE',
+        alertMsg: `Kritisk DoS / Kernel Crash exploit tvingade "${target.name}" (${target.ip}) att stängas av!`,
+      };
+    }
+
+    case 'worm_outbreak': {
+      return {
+        protocol: 'MALWARE',
+        info: `${stealthPrefix}Global Nätverksmask: Självreplikerande mask (Worm.AutoPropagate) söker och infekterar alla enheter via SMB/RPC`,
+        payloadSummary: 'Worm Shellcode: EternalBlue/Conficker lateral propagation sweep to all reachable devices',
+        isBreach: isSuccess,
+        alertTitle: 'GLOBAL NÄTVERKSMASK DETEKTERAD',
+        alertMsg: `Självspridande virus infekterar aktiva enheter i nätverket från "${hacker.name}"!`,
+      };
+    }
+
     case 'port_scan':
     default: {
       const isKnown = randomPort === 80 ? 'HTTP' : randomPort === 443 ? 'HTTPS' : randomPort === 22 ? 'SSH' : 'Okänd';
@@ -563,6 +612,10 @@ export function calculateNodeAttackImpactAndHealth(
       impactScore += 12;
     } else if (activeAttackType === 'dns_poison') {
       impactScore += 10;
+    } else if (activeAttackType === 'server_crash') {
+      impactScore += 45;
+    } else if (activeAttackType === 'worm_outbreak') {
+      impactScore += 35;
     } else {
       impactScore += 5;
     }
@@ -731,4 +784,166 @@ export function evaluateIotRulesForDevice(
 
   return { updatedNode, triggeredRules: triggeredRulesNames };
 }
+
+/**
+ * Executes a live server crash / power shutdown DoS exploit that forces the target device offline.
+ */
+export function executeServerCrashAttack(
+  hacker: Device,
+  target: Device,
+  nodes: Device[]
+): {
+  updatedNodes: Device[];
+  packet: CapturedPacket;
+  incidentTitle: string;
+  incidentDesc: string;
+} {
+  const updatedNodes = nodes.map((n) => {
+    if (n.id === target.id) {
+      return {
+        ...n,
+        on: false, // Forces target device / server DOWN
+        isInfected: true, // Tagged as compromised
+        services: n.services
+          ? {
+              ...n.services,
+              http: false,
+              dns: false,
+              sql: false,
+              vpn: false,
+              mail: false,
+            }
+          : undefined,
+      };
+    }
+    return n;
+  });
+
+  const packet = createCapturePacket(
+    hacker,
+    target,
+    'MALWARE',
+    'SUCCESS',
+    `CRASH RCE: Remote Kernel Panic trigger levererad till "${target.name}" (${target.ip || 'Ingen IP'}). Servern sänkt (OFFLINE)!`,
+    2
+  );
+  packet.payload = 'EXPLOIT: SysRq-c / CrashSignal 0xDEADBEEF -> Remote Kernel Panic & Hardware Shutdown';
+
+  const incidentTitle = `💥 SERVER KRACHAD: ${target.name}`;
+  const incidentDesc = `Angriparen "${hacker.name}" genomförde ett destruktivt DoS / Kernel Crash angrepp mot "${target.name}" (${target.ip}). Operativsystemet kraschade och enheten tvingades ned (OFFLINE).`;
+
+  return {
+    updatedNodes,
+    packet,
+    incidentTitle,
+    incidentDesc,
+  };
+}
+
+/**
+ * Spreads a self-replicating network worm to all reachable devices in the topology.
+ * Devices with active Antivirus Real-time shields block the payload; unprotected devices become infected.
+ */
+export function executeWormOutbreakAttack(
+  hacker: Device,
+  nodes: Device[],
+  links: Link[]
+): {
+  updatedNodes: Device[];
+  infectedCount: number;
+  blockedCount: number;
+  packets: CapturedPacket[];
+  animatedLinkIds: string[];
+} {
+  let infectedCount = 0;
+  let blockedCount = 0;
+  const packets: CapturedPacket[] = [];
+  const timestamp = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  const candidateTargets = nodes.filter(
+    (n) => n.id !== hacker.id && !isHackerDevice(n.type) && n.type !== 'internet' && n.on
+  );
+
+  const updatedNodes = nodes.map((node) => {
+    if (
+      node.id === hacker.id ||
+      isHackerDevice(node.type) ||
+      node.type === 'internet' ||
+      !node.on
+    ) {
+      return node;
+    }
+
+    // Check Antivirus & EDR Protection
+    if (node.antivirusInstalled && node.antivirusRealtimeProtection) {
+      blockedCount++;
+      const blockedPkt = createCapturePacket(
+        hacker,
+        node,
+        'MALWARE',
+        'DROPPED_FIREWALL',
+        `WORM BLOCK: Next-Gen Antivirus på "${node.name}" blockerade självspridande mask!`,
+        2
+      );
+      blockedPkt.payload =
+        'ANTIVIRUS DETEKTION: Threat.Worm.EternalExploit signature blocked by heuristic engine';
+      packets.push(blockedPkt);
+
+      const newLogs = [
+        `[${timestamp}] 🛡️ ANTIVIRUS BLOCKERADE: Självspridande mask från ${hacker.name} upptäcktes och sattes i karantän!`,
+        ...(node.antivirusLogs || []),
+      ].slice(0, 30);
+
+      return {
+        ...node,
+        antivirusThreatsBlocked: (node.antivirusThreatsBlocked || 0) + 1,
+        antivirusLogs: newLogs,
+      };
+    }
+
+    // Unprotected: gets INFECTED
+    infectedCount++;
+    const infectPkt = createCapturePacket(
+      hacker,
+      node,
+      'MALWARE',
+      'SUCCESS',
+      `WORM INFEKTION: Självspridande mask infekterade "${node.name}" (${node.ip || 'Ingen IP'})!`,
+      2
+    );
+    infectPkt.payload =
+      'PAYLOAD: Worm.AutoReplicate.Conficker SMB Lateral Breach (Port 445 / RCE)';
+    packets.push(infectPkt);
+
+    return {
+      ...node,
+      isInfected: true,
+      antivirusStatus: (node.antivirusInstalled ? 'INFECTED' : undefined) as any,
+    };
+  });
+
+  const targetIds = new Set(candidateTargets.map((c) => c.id));
+  const animatedLinkIds = links
+    .filter(
+      (l) =>
+        targetIds.has(l.a) ||
+        targetIds.has(l.b) ||
+        l.a === hacker.id ||
+        l.b === hacker.id
+    )
+    .map((l) => l.id);
+
+  return {
+    updatedNodes,
+    infectedCount,
+    blockedCount,
+    packets,
+    animatedLinkIds,
+  };
+}
+
 

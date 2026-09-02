@@ -74,7 +74,9 @@ import {
   advanceKillChainStage,
   ATTACK_PROFILES,
   isHackerDevice,
+  executeWormOutbreakAttack,
 } from './utils/hackerEngine';
+import { playSound } from './utils/audioSynth';
 import { optimizeNetworkLayout } from './utils/d3Layout';
 import { Play, ArrowRight, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles, Zap, Wrench, Skull, ShieldAlert, ChevronRight, ChevronLeft, Terminal } from 'lucide-react';
 import { useHistory } from './hooks/useHistory';
@@ -640,9 +642,43 @@ export default function App() {
             setIncidents((prev) => [incidentEntry, ...prev.slice(0, 99)]);
           }
 
-          // Mark target node infected if attack succeeds and breach occurred
-          if (res.success && finalDetails.isBreach) {
-            if (!target.isInfected) {
+          // Process attack consequences: Server crashes, worm propagation, and infection
+          if (res.success) {
+            if (attackType === 'server_crash') {
+              // Server or target device crashed offline
+              handleUpdateNode({
+                ...target,
+                on: false,
+                isInfected: true,
+                services: target.services
+                  ? {
+                      ...target.services,
+                      http: false,
+                      dns: false,
+                      sql: false,
+                      vpn: false,
+                      mail: false,
+                    }
+                  : undefined,
+              });
+              playSound('alarm', true, 0.4);
+            } else if (attackType === 'worm_outbreak') {
+              // Global worm spread
+              const wormRes = executeWormOutbreakAttack(hacker, nodes, links);
+              if (wormRes.infectedCount > 0) {
+                handleUpdateMultipleNodes(wormRes.updatedNodes);
+                setTestingLinkIds(wormRes.animatedLinkIds);
+                setTimeout(() => setTestingLinkIds([]), 1500);
+              }
+            } else if (attackType === 'ddos' && intensity === 'apocalyptic') {
+              // Apocalyptic DDoS storm knocks device offline
+              handleUpdateNode({
+                ...target,
+                on: false,
+                isInfected: true,
+              });
+              playSound('alarm', true, 0.4);
+            } else if (finalDetails.isBreach && !target.isInfected) {
               handleUpdateNode({
                 ...target,
                 isInfected: true,
@@ -1787,6 +1823,8 @@ export default function App() {
             setTestingLinkIds(linkIds);
             setTimeout(() => setTestingLinkIds([]), 1200);
           }}
+          onUpdateNode={handleUpdateNode}
+          onUpdateMultipleNodes={handleUpdateMultipleNodes}
           onClose={() => setShowTrafficGen(false)}
         />
       )}

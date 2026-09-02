@@ -65,7 +65,10 @@ import {
   isHackerDevice,
   isIoTDevice,
   evaluateIotRulesForDevice,
+  executeServerCrashAttack,
+  executeWormOutbreakAttack,
 } from '../utils/hackerEngine';
+import { playSound } from '../utils/audioSynth';
 import { RealisticDeviceIcon } from './RealisticDeviceIcon';
 
 interface InspectorProps {
@@ -126,6 +129,7 @@ export const Inspector: React.FC<InspectorProps> = ({
   const [newFwDesc, setNewFwDesc] = useState('');
   const [isFixingNode, setIsFixingNode] = useState(false);
   const [fixSuccessMessage, setFixSuccessMessage] = useState<string | null>(null);
+  const [hackerActionFeedback, setHackerActionFeedback] = useState<string | null>(null);
 
   // IoT IFTTT Rule state
   const [newRuleTrigger, setNewRuleTrigger] = useState<IotRuleTrigger>('hacker_in_subnet');
@@ -318,6 +322,32 @@ export const Inspector: React.FC<InspectorProps> = ({
                   <span>{selectedNode.on ? 'Aktiv (PÅ)' : 'Avstängd'}</span>
                 </button>
               </div>
+
+              {!selectedNode.on && (
+                <div className="text-[11px] text-rose-300/90 bg-rose-950/40 p-2.5 rounded-lg border border-rose-900/50 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>
+                      {selectedNode.isInfected
+                        ? 'Enheten tvingades ned / kraschades av ett cyberangrepp!'
+                        : 'Enheten är för närvarande avstängd (offline).'}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateNode({
+                        ...selectedNode,
+                        on: true,
+                        isInfected: false,
+                      })
+                    }
+                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-[10px] cursor-pointer shrink-0 shadow-md transition"
+                  >
+                    Starta Enhet
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Live Cyber Health & Attack Impact Monitor */}
@@ -1544,6 +1574,113 @@ export const Inspector: React.FC<InspectorProps> = ({
                     </button>
                   </div>
 
+                  {/* Instant Live Hacker Exploits Arsenal */}
+                  <div className="bg-slate-950 p-2.5 rounded-xl border border-rose-950/70 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-rose-300">
+                      <span className="flex items-center gap-1.5">
+                        <Skull className="w-3.5 h-3.5 text-rose-400" />
+                        <span>Reella Hacker-Förmågor (Live Exploits)</span>
+                      </span>
+                      <span className="text-[9px] font-mono text-rose-400/90 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                        DIREKTVERKANDE
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Button 1: Crash Server / Device */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target =
+                            nodes.find(
+                              (n) =>
+                                n.id !== selectedNode.id &&
+                                n.on &&
+                                ((selectedNode.hackerTargetIp &&
+                                  (n.ip === selectedNode.hackerTargetIp || n.id === selectedNode.hackerTargetIp)) ||
+                                  n.type.startsWith('server_') ||
+                                  n.ip)
+                            ) || reachableTargets[0];
+
+                          if (!target) {
+                            setHackerActionFeedback(
+                              '⚠️ Inget aktivt mål hittades! Välj eller koppla en målenhet först.'
+                            );
+                            setTimeout(() => setHackerActionFeedback(null), 4000);
+                            return;
+                          }
+
+                          const res = executeServerCrashAttack(selectedNode, target, nodes);
+                          if (onUpdateMultipleNodes) {
+                            onUpdateMultipleNodes(res.updatedNodes);
+                          } else {
+                            const updatedTarget = res.updatedNodes.find((n) => n.id === target.id);
+                            if (updatedTarget) onUpdateNode(updatedTarget);
+                          }
+
+                          playSound('alarm', true, 0.6);
+                          setHackerActionFeedback(
+                            `💥 SERVER NEDSÄNKT: "${target.name}" (${target.ip || 'IP'}) kraschade och togs OFFLINE!`
+                          );
+                          setTimeout(() => setHackerActionFeedback(null), 6000);
+                        }}
+                        className="p-2 rounded-lg bg-gradient-to-b from-rose-950/80 to-slate-900 border border-rose-500/50 hover:border-rose-400 text-left transition hover:scale-[1.02] active:scale-[0.98] group cursor-pointer shadow-md"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-base">💥</span>
+                          <span className="text-[8px] font-mono font-extrabold uppercase bg-rose-500/20 text-rose-300 px-1 py-0.2 rounded">
+                            DoS Crash
+                          </span>
+                        </div>
+                        <div className="font-bold text-[11px] text-rose-200 mt-1 group-hover:text-rose-100 leading-tight">
+                          Sänk Servern
+                        </div>
+                        <div className="text-[8.5px] text-slate-400 mt-0.5 leading-snug">
+                          Tvingar målenheten offline (power off) med kernel panic exploit
+                        </div>
+                      </button>
+
+                      {/* Button 2: Spread Virus to ALL devices */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const res = executeWormOutbreakAttack(selectedNode, nodes, links);
+                          if (onUpdateMultipleNodes) {
+                            onUpdateMultipleNodes(res.updatedNodes);
+                          }
+
+                          playSound('alarm', true, 0.6);
+                          setHackerActionFeedback(
+                            `🦠 NÄTVERKSVIRUS SPRITT: ${res.infectedCount} enheter infekterade! (${res.blockedCount} skyddades av Antivirus)`
+                          );
+                          setTimeout(() => setHackerActionFeedback(null), 6000);
+                        }}
+                        className="p-2 rounded-lg bg-gradient-to-b from-emerald-950/70 to-slate-900 border border-emerald-500/50 hover:border-emerald-400 text-left transition hover:scale-[1.02] active:scale-[0.98] group cursor-pointer shadow-md"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-base">🦠</span>
+                          <span className="text-[8px] font-mono font-extrabold uppercase bg-emerald-500/20 text-emerald-300 px-1 py-0.2 rounded">
+                            Worm Virus
+                          </span>
+                        </div>
+                        <div className="font-bold text-[11px] text-emerald-200 mt-1 group-hover:text-emerald-100 leading-tight">
+                          Infektera Alla
+                        </div>
+                        <div className="text-[8.5px] text-slate-400 mt-0.5 leading-snug">
+                          Skickar självspridande mask som infekterar alla oskyddade enheter
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Feedback message banner */}
+                    {hackerActionFeedback && (
+                      <div className="bg-rose-950/90 border border-rose-500/80 p-2 rounded-lg text-[11px] text-rose-200 font-mono flex items-start gap-1.5 animate-fade-in shadow-lg">
+                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                        <span className="leading-snug">{hackerActionFeedback}</span>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Autonomous AI Kill Chain Stage Indicator */}
                   {(selectedNode.hackerAttackType === 'autonomous_ai' ||
                     !selectedNode.hackerAttackType) && (
@@ -1660,11 +1797,13 @@ export const Inspector: React.FC<InspectorProps> = ({
                     )}
                   </div>
 
-                  {/* Attack Profile Selector Gallery (8 Advanced Profiles) */}
+                  {/* Attack Profile Selector Gallery */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-slate-300 font-bold text-xs">
                       <span>Attack-Vektor</span>
-                      <span className="text-[10px] font-mono text-rose-400">8 profiler</span>
+                      <span className="text-[10px] font-mono text-rose-400">
+                        {Object.keys(ATTACK_PROFILES).length} profiler
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto pr-1 custom-scrollbar">

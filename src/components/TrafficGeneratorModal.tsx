@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { Zap, ShieldAlert, Activity, Play, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { Zap, ShieldAlert, Activity, Play, CheckCircle2, AlertTriangle, X, Skull, Bug } from 'lucide-react';
 import { Device, Link, CapturedPacket } from '../types';
 import { findPathAndSimulate, createCapturePacket } from '../utils/networkEngine';
+import { executeWormOutbreakAttack } from '../utils/hackerEngine';
 
 interface TrafficGeneratorModalProps {
   nodes: Device[];
   links: Link[];
   onAddPackets: (packets: CapturedPacket[]) => void;
   onTriggerAnimation: (linkIds: string[]) => void;
+  onUpdateNode?: (node: Device) => void;
+  onUpdateMultipleNodes?: (nodes: Device[]) => void;
   onClose: () => void;
 }
 
@@ -16,6 +19,8 @@ export const TrafficGeneratorModal: React.FC<TrafficGeneratorModalProps> = ({
   links,
   onAddPackets,
   onTriggerAnimation,
+  onUpdateNode,
+  onUpdateMultipleNodes,
   onClose,
 }) => {
   const [selectedSourceId, setSelectedSourceId] = useState<string>(
@@ -25,7 +30,7 @@ export const TrafficGeneratorModal: React.FC<TrafficGeneratorModalProps> = ({
     nodes[nodes.length - 1] ? nodes[nodes.length - 1].id : ''
   );
   const [trafficType, setTrafficType] = useState<
-    'http' | 'syn_flood' | 'port_scan' | 'voip'
+    'http' | 'syn_flood' | 'port_scan' | 'voip' | 'server_crash' | 'worm_outbreak'
   >('http');
   const [isRunning, setIsRunning] = useState(false);
   const [simulationLogs, setSimulationLogs] = useState<string[]>([]);
@@ -43,7 +48,71 @@ export const TrafficGeneratorModal: React.FC<TrafficGeneratorModalProps> = ({
 
     const generatedPackets: CapturedPacket[] = [];
 
-    if (trafficType === 'http') {
+    if (trafficType === 'server_crash') {
+      const res = findPathAndSimulate(srcNode.id, dstNode.id, nodes, links, 'MALWARE', 80);
+      onTriggerAnimation(res.pathLinks.map((l) => l.id));
+
+      for (let i = 0; i < 6; i++) {
+        const pkt = createCapturePacket(
+          srcNode,
+          dstNode,
+          'MALWARE',
+          res.success ? 'SUCCESS' : 'DROPPED_FIREWALL',
+          res.success
+            ? `CRASH EXPLOIT: Remote Kernel Panic trigger delivered to ${dstNode.name} (${dstNode.ip || 'No IP'})`
+            : `FIREWALL BLOCKED: Malicious crash payload dropped by security gateway`,
+          res.pathNodes.length
+        );
+        pkt.payload = 'EXPLOIT: SysRq-c / CrashSignal 0xDEADBEEF -> Remote Kernel Panic & Hardware Shutdown';
+        generatedPackets.push(pkt);
+      }
+
+      if (res.success) {
+        if (onUpdateNode) {
+          onUpdateNode({
+            ...dstNode,
+            on: false,
+            isInfected: true,
+            services: dstNode.services
+              ? {
+                  ...dstNode.services,
+                  http: false,
+                  dns: false,
+                  sql: false,
+                  vpn: false,
+                  mail: false,
+                }
+              : undefined,
+          });
+        }
+        setSimulationLogs((prev) => [
+          ...prev,
+          `💥 [KRITISK EXPLOIT] Remote Kernel Panic payload penetrerade till ${dstNode.name} (${dstNode.ip})!`,
+          `💥 [SERVER NEDSÄNKT] "${dstNode.name}" kraschade och stängdes av (OFFLINE)!`,
+          `⚠️ Alla aktiva tjänster på servern har stoppats omedelbart.`,
+        ]);
+      } else {
+        setSimulationLogs((prev) => [
+          ...prev,
+          `🛡️ [SKYDDAD] Brandvägg eller säkerhetsgateway blockerade Crash Exploit!`,
+          `🟢 Målenheten "${dstNode.name}" förblir oskadd och online.`,
+        ]);
+      }
+    } else if (trafficType === 'worm_outbreak') {
+      const wormRes = executeWormOutbreakAttack(srcNode, nodes, links);
+      if (onUpdateMultipleNodes) {
+        onUpdateMultipleNodes(wormRes.updatedNodes);
+      }
+      onTriggerAnimation(wormRes.animatedLinkIds);
+      generatedPackets.push(...wormRes.packets);
+
+      setSimulationLogs((prev) => [
+        ...prev,
+        `🦠 [MASKUTBROTT] Självspridande nätverksmask släppt från "${srcNode.name}"!`,
+        `☣️ [INFEKTERADE] ${wormRes.infectedCount} enhet(er) infekterades i nätverket.`,
+        `🛡️ [FÖRSVAR] ${wormRes.blockedCount} enhet(er) skyddades av aktivt Next-Gen Antivirus!`,
+      ]);
+    } else if (trafficType === 'http') {
       const res = findPathAndSimulate(srcNode.id, dstNode.id, nodes, links, 'HTTP', 80);
       onTriggerAnimation(res.pathLinks.map((l) => l.id));
 
@@ -202,6 +271,42 @@ export const TrafficGeneratorModal: React.FC<TrafficGeneratorModalProps> = ({
             Trafikmönster / Simulationstyp
           </label>
           <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setTrafficType('server_crash')}
+              className={`p-3 rounded-xl border text-left transition ${
+                trafficType === 'server_crash'
+                  ? 'bg-rose-600/25 border-rose-500 text-rose-200 font-semibold shadow-md shadow-rose-950/50'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <div className="font-bold text-rose-400 flex items-center gap-1.5">
+                <Skull className="w-3.5 h-3.5 text-rose-400" />
+                <span>💥 Server Crash / Tvinga Ned</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                DoS Kernel Panic som kraschar målet och stänger av enheten
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTrafficType('worm_outbreak')}
+              className={`p-3 rounded-xl border text-left transition ${
+                trafficType === 'worm_outbreak'
+                  ? 'bg-emerald-600/25 border-emerald-500 text-emerald-200 font-semibold shadow-md shadow-emerald-950/50'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                <Bug className="w-3.5 h-3.5 text-emerald-400" />
+                <span>🦠 Globalt Virus / Nätverksmask</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                Sprider mask över nätverket och infekterar alla oskyddade enheter
+              </div>
+            </button>
+
             <button
               type="button"
               onClick={() => setTrafficType('http')}

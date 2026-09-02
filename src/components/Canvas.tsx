@@ -2460,27 +2460,68 @@ export const Canvas: React.FC<CanvasProps> = ({
                       </button>
                     )}
  
-                    {/* Online / Connectivity / Infection Status LED */}
+                    {/* Node Health Status Indicator Badge (Color-coded: Green = Online, Red = Infected, Gray = Offline) */}
                     <div
-                      className={`absolute top-1.5 right-1.5 rounded-full transition-all ${
+                      className={`absolute -top-2.5 -right-2.5 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-mono font-extrabold tracking-tight border shadow-md backdrop-blur-md transition-all select-none pointer-events-auto ${
                         node.isInfected
-                          ? 'w-3 h-3 bg-rose-500 ring-2 ring-rose-300 shadow-[0_0_12px_#f43f5e] animate-ping'
+                          ? isLight
+                            ? 'bg-rose-100 text-rose-800 border-rose-400 shadow-sm animate-pulse'
+                            : 'bg-rose-950/95 text-rose-200 border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)] animate-pulse'
+                          : isTargetOfAttack
+                          ? isLight
+                            ? 'bg-red-100 text-red-800 border-red-400 shadow-sm animate-pulse'
+                            : 'bg-red-950/95 text-red-200 border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse'
                           : !isOnline
-                          ? 'w-2 h-2 bg-rose-500 shadow-[0_0_6px_#f43f5e]'
-                          : hasInternet
-                          ? 'w-2 h-2 bg-emerald-400 shadow-[0_0_8px_#34d399]'
-                          : 'w-2 h-2 bg-amber-400 shadow-[0_0_6px_#fbbf24]'
+                          ? isLight
+                            ? 'bg-slate-200 text-slate-600 border-slate-300 shadow-xs'
+                            : 'bg-slate-900/95 text-slate-400 border-slate-700 shadow-xs'
+                          : hasWarning
+                          ? isLight
+                            ? 'bg-amber-100 text-amber-800 border-amber-400 shadow-xs'
+                            : 'bg-amber-950/90 text-amber-300 border-amber-500/60 shadow-xs'
+                          : isLight
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-400 shadow-xs'
+                          : 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
                       }`}
                       title={
                         node.isInfected
-                          ? '⚠️ SKADLIG KOD UPPTÄCKT! Noden är infekterad.'
+                          ? 'Hälsa: Infekterad (Skadlig kod aktiv) - Kräver sanering'
+                          : isTargetOfAttack
+                          ? 'Hälsa: Aktivt under angrepp (DDoS/Överbelastning)'
                           : !isOnline
-                          ? 'Enhet avstängd'
+                          ? 'Hälsa: Offline (Enhet är avstängd)'
+                          : hasWarning
+                          ? `Hälsa: Varning (${warningInfo.issues[0] || 'Konfigurationsfel'})`
                           : hasInternet
-                          ? 'Ansluten till Internet (Full WAN-åtkomst)'
-                          : 'Isolerat lokalnätverk (Inget Internet)'
+                          ? 'Hälsa: Online (Frisk, Full Internetanslutning)'
+                          : 'Hälsa: Online (Frisk, Lokalnätverk)'
                       }
-                    />
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          node.isInfected
+                            ? 'bg-rose-500 animate-ping'
+                            : isTargetOfAttack
+                            ? 'bg-red-500 animate-ping'
+                            : !isOnline
+                            ? 'bg-slate-400'
+                            : hasWarning
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-400 shadow-[0_0_6px_#34d399]'
+                        }`}
+                      />
+                      <span className="leading-none text-[8px] uppercase tracking-wider font-extrabold">
+                        {node.isInfected
+                          ? 'Infected'
+                          : isTargetOfAttack
+                          ? 'Attack'
+                          : !isOnline
+                          ? 'Offline'
+                          : hasWarning
+                          ? 'Warning'
+                          : 'Online'}
+                      </span>
+                    </div>
  
                     {/* Device Icon */}
                     <div className="p-1">{renderDeviceIcon(node.type)}</div>

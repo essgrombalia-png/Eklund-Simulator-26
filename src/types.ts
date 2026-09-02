@@ -129,7 +129,9 @@ export interface Device {
     | 'ransomware'
     | 'zero_day'
     | 'dns_poison'
-    | 'autonomous_ai';
+    | 'autonomous_ai'
+    | 'server_crash'
+    | 'worm_outbreak';
   hackerAutoAttack?: boolean;
   hackerStealthMode?: boolean;
   hackerPayloadSize?: number;

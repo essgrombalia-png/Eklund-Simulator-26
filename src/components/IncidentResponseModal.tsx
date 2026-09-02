@@ -41,6 +41,7 @@ import {
   KILL_CHAIN_STAGES_META,
   KillChainStageMeta,
 } from '../utils/incidentManager';
+import { SecurityFeedTerminal } from './SecurityFeedTerminal';
 
 interface IncidentResponseModalProps {
   isOpen: boolean;
@@ -73,6 +74,7 @@ export function IncidentResponseModal({
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'security_feed'>('dashboard');
 
   // Compute active Kill Chain stages present in logs
   const detectedStages = useMemo(() => {
@@ -86,6 +88,14 @@ export function IncidentResponseModal({
   const criticalCount = incidents.filter((i) => i.severity === 'CRITICAL').length;
   const activeCount = incidents.filter((i) => i.status === 'ACTIVE').length;
   const containedCount = incidents.filter((i) => i.status === 'CONTAINED' || i.isContained).length;
+  const successfulAttacksCount = useMemo(() => {
+    return incidents.filter(
+      (i) =>
+        !i.isContained &&
+        i.status === 'ACTIVE' &&
+        !i.title.toLowerCase().includes('[blockerad]')
+    ).length;
+  }, [incidents]);
 
   const highestStage = useMemo(() => {
     const stagesInOrder: CyberKillChainStage[] = [
@@ -305,8 +315,63 @@ export function IncidentResponseModal({
           </div>
         )}
 
-        {/* Top Metric Bar & Kill Chain Pipeline visualizer */}
-        <div className="px-6 py-4 bg-slate-950/60 border-b border-slate-800 flex flex-col gap-4">
+        {/* View Mode Navigation Tabs */}
+        <div className="flex items-center justify-between px-6 py-2.5 bg-slate-950 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                activeTab === 'dashboard'
+                  ? 'bg-slate-800 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
+              }`}
+            >
+              <Activity className="w-4 h-4 text-cyan-400" />
+              <span>Incident Dashboard & MITRE ATT&CK</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('security_feed')}
+              className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono flex items-center gap-2 transition cursor-pointer ${
+                activeTab === 'security_feed'
+                  ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/60 shadow-md shadow-emerald-950/60 ring-1 ring-emerald-500/30'
+                  : 'text-slate-400 hover:text-emerald-400 hover:bg-slate-900 border border-transparent'
+              }`}
+            >
+              <Terminal className="w-4 h-4 text-emerald-400" />
+              <span>Security Feed [Hacker Terminal]</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-500/25 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
+                {successfulAttacksCount} lyckade
+              </span>
+              {successfulAttacksCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+              )}
+            </button>
+          </div>
+
+          <div className="text-[11px] font-mono text-slate-400 hidden sm:flex items-center gap-2">
+            <span className="text-emerald-400 font-bold">● SOC TELEMETRY</span>
+            <span>|</span>
+            <span>{incidents.length} loggade händelser</span>
+          </div>
+        </div>
+
+        {activeTab === 'security_feed' ? (
+          <SecurityFeedTerminal
+            incidents={incidents}
+            nodes={nodes}
+            links={links}
+            onIsolateNode={handleIsolateNode}
+            onCleanNodeInfection={handleCleanNodeInfection}
+            onBlockIpInFirewall={handleBlockIpInFirewall}
+            onSelectNodeOnCanvas={onSelectNodeOnCanvas}
+            onUpdateNode={onUpdateNode}
+            onCloseModal={onClose}
+          />
+        ) : (
+          <>
+            {/* Top Metric Bar & Kill Chain Pipeline visualizer */}
+            <div className="px-6 py-4 bg-slate-950/60 border-b border-slate-800 flex flex-col gap-4">
           {/* Quick Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-3">
@@ -681,6 +746,8 @@ export function IncidentResponseModal({
           </div>
 
         </div>
+        </>
+        )}
 
       </div>
     </div>

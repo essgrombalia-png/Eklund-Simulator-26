@@ -122,7 +122,23 @@ export function createIncidentFromPacket(
   let description = `Misstänkt SYN/UDP-skanning från ${pkt.sourceName} (${pkt.sourceIp}) mot ${pkt.destName} (${pkt.destIp}).`;
   let recommendedAction = 'Konfigurera brandväggsregler för att blockera ICMP/SYN-svep och begränsa IP-adresser.';
 
-  if (infoLower.includes('ransomware') || payloadLower.includes('cryptolocker') || payloadLower.includes('rsa-4096')) {
+  if (infoLower.includes('crash') || payloadLower.includes('sysrq') || payloadLower.includes('kernel-panic') || infoLower.includes('krachad') || infoLower.includes('krasch')) {
+    stage = 'IMPACT';
+    severity = 'CRITICAL';
+    mitreId = 'T1499';
+    mitreName = 'Endpoint Denial of Service (OS Crash)';
+    title = '💥 Server Crash & Kernel Panic DoS';
+    description = `Destruktiv DoS / Kernel Panic trigger levererades till ${pkt.destName} (${pkt.destIp}). Servern kraschades och togs offline!`;
+    recommendedAction = 'Starta om enheten i säkert läge, granska kernel-kraschdumpen och blockera angriparens IP i hårdvarubrandväggen.';
+  } else if (infoLower.includes('worm') || payloadLower.includes('worm') || payloadLower.includes('conficker') || infoLower.includes('mask')) {
+    stage = 'LATERAL_MOVEMENT';
+    severity = 'CRITICAL';
+    mitreId = 'T1080';
+    mitreName = 'Taint Shared Content / Worm Propagation';
+    title = '🦠 Globalt Nätverksmask-utbrott';
+    description = `Självreplikerande mask (Worm.AutoPropagate) sprids via SMB/RPC mot ${pkt.destName} (${pkt.destIp}).`;
+    recommendedAction = 'Aktivera Next-Gen Antivirus realtidssköld på alla nätverksändpunkter och isolera infekterade subnet.';
+  } else if (infoLower.includes('ransomware') || payloadLower.includes('cryptolocker') || payloadLower.includes('rsa-4096')) {
     stage = 'IMPACT';
     severity = 'CRITICAL';
     mitreId = 'T1486';

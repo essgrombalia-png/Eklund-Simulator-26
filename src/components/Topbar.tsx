@@ -180,58 +180,38 @@ export const Topbar: React.FC<TopbarProps> = ({
   const totalThreats = incidentCount + (issueCount > 0 ? issueCount : 0);
 
   return (
-    <header className="bg-slate-950/90 backdrop-blur-md border-b border-slate-800/90 text-slate-200 px-3.5 py-2 flex items-center justify-between gap-2 shadow-xl z-30 select-none relative transition-all duration-200">
-      {/* LEFT SECTION: Logo, Telemetry Pill, Architecture Selector */}
-      <div className="flex items-center gap-3 shrink-0">
+    <header
+      id="main-app-header"
+      className="h-14 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800/80 text-slate-200 px-3 lg:px-4 flex items-center justify-between gap-2 lg:gap-3 shadow-xl z-30 select-none relative transition-all duration-200 shrink-0"
+    >
+      {/* ─── ZONE 1: LEFT (Brand, Scenarios & Architecture) ─── */}
+      <div className="flex items-center gap-2.5 lg:gap-3 shrink-0">
         <EklundLogo size="sm" showSubtitle={false} />
 
-        {/* Live Network Health Telemetry */}
-        <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800/80 text-[11px] font-mono text-slate-300 shadow-inner">
-          <span className="flex items-center gap-1.5 font-semibold">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
-            </span>
-            <span className="text-cyan-300 font-bold">{nodeCount}</span> noder
-          </span>
-          <span className="text-slate-700">|</span>
-          <span className="text-slate-400">
-            <span className="text-slate-200 font-bold">{linkCount}</span> länkar
-          </span>
-          <span className="text-slate-700">|</span>
-          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            {onlineCount} online
-          </span>
-          {lastAutoSavedTime && (
-            <>
-              <span className="text-slate-700">|</span>
-              <span className="text-[10px] text-slate-500 font-sans" title="Automatisk molnsynk & lokal backup var 30:e sek">
-                {lastAutoSavedTime}
-              </span>
-            </>
-          )}
-        </div>
+        <div className="h-5 w-px bg-slate-800/80 hidden sm:block" />
 
         {/* Architecture & Scenario Hub */}
         <div className="flex items-center gap-1.5">
           {onOpenScenarioModal && (
             <button
+              id="topbar-scenarios-btn"
+              type="button"
               onClick={onOpenScenarioModal}
               title="Öppna Nätverksutmaningar & Felsökningsscenarier"
-              className="group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/15 via-cyan-500/10 to-teal-500/15 hover:from-amber-500/25 hover:to-teal-500/25 text-amber-200 border border-amber-500/30 hover:border-amber-400/80 transition-all text-xs font-semibold shadow-sm cursor-pointer"
+              className="group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-200 border border-amber-500/30 hover:border-amber-400/70 transition-all text-xs font-semibold shadow-xs cursor-pointer active:scale-95"
             >
-              <Trophy className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+              <Trophy className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
               <span className="hidden sm:inline font-bold">Scenarier</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500/25 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/40">
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/40 leading-none">
                 {completedScenarioCount}/{PROBLEM_SCENARIOS.length}
               </span>
             </button>
           )}
 
-          {/* Quick Architecture Dropdown */}
+          {/* Quick Architecture Preset Dropdown */}
           <div className="relative hidden md:block">
             <select
+              id="topbar-architecture-select"
               value={currentScenarioId || 'custom'}
               onChange={(e) => {
                 if (e.target.value === 'custom') {
@@ -242,7 +222,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 }
               }}
               title="Välj fördefinierad nätverksarkitektur"
-              className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs rounded-lg pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/60 transition cursor-pointer font-medium appearance-none max-w-[140px] lg:max-w-[180px] truncate"
+              className="bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs rounded-lg pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/60 transition cursor-pointer font-medium appearance-none max-w-[130px] lg:max-w-[160px] truncate shadow-xs"
             >
               <option value="custom">✨ Tom arbetsyta</option>
               <optgroup label="Färdiga Arkitekturer">
@@ -257,10 +237,153 @@ export const Topbar: React.FC<TopbarProps> = ({
           </div>
         </div>
 
-        {/* --- DYNAMIC SEARCH BAR --- */}
+        {/* Live Network Telemetry Pill */}
+        <div className="hidden 2xl:flex items-center gap-2 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800/80 text-[11px] font-mono text-slate-300 shadow-inner">
+          <span className="flex items-center gap-1.5 font-semibold">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
+            </span>
+            <span className="text-cyan-300 font-bold">{nodeCount}</span> noder
+          </span>
+          <span className="text-slate-700">·</span>
+          <span className="text-slate-400">
+            <span className="text-slate-200 font-bold">{linkCount}</span> länkar
+          </span>
+          <span className="text-slate-700">·</span>
+          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            {onlineCount} online
+          </span>
+          {lastAutoSavedTime && (
+            <>
+              <span className="text-slate-700">·</span>
+              <span className="text-[10px] text-slate-500 font-sans truncate max-w-[100px]" title="Automatisk lokal synk">
+                {lastAutoSavedTime}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ─── ZONE 2: CENTER (Segmented Views Navigation) ─── */}
+      <div className="flex items-center justify-center shrink-0">
+        <nav
+          id="topbar-views-nav"
+          className="flex items-center bg-slate-900/90 p-0.5 sm:p-1 rounded-xl border border-slate-800/90 shadow-inner gap-0.5"
+          aria-label="Applikationsvyer"
+        >
+          <button
+            id="topbar-tab-canvas"
+            type="button"
+            onClick={() => setActiveTab('canvas')}
+            title="Topologisk 2D/3D Nätverkskarta"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'canvas'
+                ? 'bg-sky-500 text-slate-950 font-bold shadow-md shadow-sky-500/25'
+                : 'text-slate-400 hover:text-sky-300 hover:bg-sky-500/10'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden sm:inline">Topologi</span>
+          </button>
+
+          <button
+            id="topbar-tab-terminal"
+            type="button"
+            onClick={() => {
+              setActiveTab('terminal');
+              onOpenTerminal();
+            }}
+            title="Cisco IOS & Linux Terminal CLI"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'terminal'
+                ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/25'
+                : 'text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+            }`}
+          >
+            <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Terminal</span>
+          </button>
+
+          {activeTab === 'canvas' && onToggleMiniTerminal && (
+            <button
+              id="topbar-tab-miniterminal"
+              type="button"
+              onClick={onToggleMiniTerminal}
+              title="Växla Mini-Terminal (Flytande fönster i Canvas)"
+              className={`hidden xl:flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                showMiniTerminal
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-xs'
+                  : 'text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent'
+              }`}
+            >
+              <Terminal className="w-3 h-3 text-emerald-400" />
+              <span>Mini</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${showMiniTerminal ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+            </button>
+          )}
+
+          <button
+            id="topbar-tab-packets"
+            type="button"
+            onClick={() => {
+              setActiveTab('packets');
+              onOpenPacketInspector();
+            }}
+            title="Wireshark-stil Nätverkspaketinspektör"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'packets'
+                ? 'bg-blue-500 text-white font-bold shadow-md shadow-blue-500/25'
+                : 'text-slate-400 hover:text-blue-300 hover:bg-blue-500/10'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Paket</span>
+          </button>
+
+          <button
+            id="topbar-tab-traffic"
+            type="button"
+            onClick={() => {
+              setActiveTab('traffic');
+              onOpenTrafficGen();
+            }}
+            title="Trafikgenerator, DDoS & Cyberbelastning"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'traffic'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/25'
+                : 'text-slate-400 hover:text-amber-300 hover:bg-amber-500/10'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline">Trafik</span>
+          </button>
+
+          <button
+            id="topbar-tab-stats"
+            type="button"
+            onClick={() => setActiveTab('stats')}
+            title="Realtidstelemetri & Nätverksprestanda"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'stats'
+                ? 'bg-purple-500 text-white font-bold shadow-md shadow-purple-500/25'
+                : 'text-slate-400 hover:text-purple-300 hover:bg-purple-500/10'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden lg:inline">Statistik</span>
+          </button>
+        </nav>
+      </div>
+
+      {/* ─── ZONE 3: RIGHT (Search, Action Tools & Profile) ─── */}
+      <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
+        {/* Dynamic Search Bar */}
         <div className="relative hidden md:block" ref={searchContainerRef}>
           <div className="relative">
             <input
+              id="topbar-node-search"
               type="text"
               value={searchQuery}
               onChange={(e) => {
@@ -268,12 +391,13 @@ export const Topbar: React.FC<TopbarProps> = ({
                 setSearchDropdownOpen(true);
               }}
               onFocus={() => setSearchDropdownOpen(true)}
-              placeholder="Sök nod (namn, IP, MAC)..."
-              className="bg-slate-900 hover:bg-slate-850 border border-slate-800 focus:border-cyan-500/80 rounded-lg text-xs pl-8 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all duration-200 w-44 lg:w-52 focus:w-60 text-slate-200 placeholder-slate-500 shadow-inner"
+              placeholder="Sök nod..."
+              className="bg-slate-900/90 hover:bg-slate-850 border border-slate-800 focus:border-cyan-500/80 rounded-lg text-xs pl-8 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all duration-200 w-28 lg:w-40 xl:w-48 focus:w-56 text-slate-200 placeholder-slate-500 shadow-inner"
             />
             <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSearchDropdownOpen(false);
@@ -288,7 +412,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
           {/* Search Dropdown Panel */}
           {searchDropdownOpen && searchQuery.trim() !== '' && (
-            <div className="absolute left-0 mt-1.5 w-72 max-h-64 overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-slate-800">
+            <div className="absolute right-0 mt-1.5 w-72 max-h-64 overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-slate-800">
               <div className="px-2 py-1 border-b border-slate-800/60 mb-1 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 <span>Sökresultat</span>
                 <span className="font-mono text-cyan-400/80">{filteredNodes.length} funna</span>
@@ -327,6 +451,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                   return (
                     <button
                       key={node.id}
+                      type="button"
                       onClick={() => {
                         if (onSelectNode) {
                           onSelectNode(node.id);
@@ -368,385 +493,313 @@ export const Topbar: React.FC<TopbarProps> = ({
             </div>
           )}
         </div>
-      </div>
 
-      {/* CENTER SECTION: Segmented View Navigation with Unique Colors */}
-      <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shadow-inner gap-0.5">
-        <button
-          onClick={() => setActiveTab('canvas')}
-          title="Topologisk 2D/3D Nätverkskarta"
-          className={`flex items-center gap-1.5 px-3 py-1.2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'canvas'
-              ? 'bg-sky-500 text-slate-950 font-bold shadow-md shadow-sky-500/25'
-              : 'text-sky-400/80 hover:text-sky-300 hover:bg-sky-500/10'
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5 text-sky-400" />
-          <span className="hidden sm:inline">Topologi</span>
-        </button>
+        <div className="h-5 w-px bg-slate-800/80 hidden md:block" />
 
-        <button
-          onClick={() => {
-            setActiveTab('terminal');
-            onOpenTerminal();
-          }}
-          title="Cisco IOS & Linux Terminal CLI"
-          className={`flex items-center gap-1.5 px-3 py-1.2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'terminal'
-              ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/25'
-              : 'text-emerald-400/80 hover:text-emerald-300 hover:bg-emerald-500/10'
-          }`}
-        >
-          <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden sm:inline">Terminal</span>
-        </button>
-
-        {activeTab === 'canvas' && onToggleMiniTerminal && (
-          <button
-            onClick={onToggleMiniTerminal}
-            title="Växla Mini-Terminal (Flytande fönster i Canvas)"
-            className={`flex items-center gap-1 px-2.5 py-1.2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              showMiniTerminal
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-sm shadow-emerald-500/20'
-                : 'text-emerald-400/80 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent'
-            }`}
-          >
-            <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden xl:inline">Mini-CLI</span>
-            <span className={`w-1.5 h-1.5 rounded-full ${showMiniTerminal ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
-          </button>
-        )}
-
-        <button
-          onClick={() => {
-            setActiveTab('packets');
-            onOpenPacketInspector();
-          }}
-          title="Wireshark-stil Nätverkspaketinspektör"
-          className={`flex items-center gap-1.5 px-3 py-1.2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'packets'
-              ? 'bg-blue-500 text-white font-bold shadow-md shadow-blue-500/25'
-              : 'text-blue-400/80 hover:text-blue-300 hover:bg-blue-500/10'
-          }`}
-        >
-          <Radio className="w-3.5 h-3.5 text-blue-400" />
-          <span className="hidden sm:inline">Paket</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('traffic');
-            onOpenTrafficGen();
-          }}
-          title="Trafikgenerator, DDoS & Cyberbelastning"
-          className={`flex items-center gap-1.5 px-3 py-1.2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'traffic'
-              ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/25'
-              : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10'
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5 text-amber-400" />
-          <span className="hidden md:inline">Trafik</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('stats')}
-          title="Realtidstelemetri & Nätverksprestanda"
-          className={`flex items-center gap-1.5 px-3 py-1.2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'stats'
-              ? 'bg-purple-500 text-white font-bold shadow-md shadow-purple-500/25'
-              : 'text-purple-400/80 hover:text-purple-300 hover:bg-purple-500/10'
-          }`}
-        >
-          <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
-          <span className="hidden lg:inline">Statistik</span>
-        </button>
-      </div>
-
-      {/* RIGHT SECTION: Modular Control Hub with Distinct Colored Functions */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {/* 1. AUTO-FIX & DIAGNOSTIC BUTTON */}
-        {onOpenAutoRepair && (
-          <button
-            onClick={onOpenAutoRepair}
-            title="Diagnostik & Automatisk Nätverksreparation"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer ${
-              issueCount > 0
-                ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/60 animate-pulse shadow-rose-950/40'
-                : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
-            }`}
-          >
-            <Sparkles className={`w-3.5 h-3.5 ${issueCount > 0 ? 'text-rose-400' : 'text-emerald-400'}`} />
-            <span className="hidden sm:inline font-bold">Auto-Fix</span>
-            {issueCount > 0 ? (
-              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-slate-950 text-[10px] font-black font-mono">
-                {issueCount} fel
-              </span>
-            ) : (
-              <span className="text-[10px] text-emerald-400 font-mono font-bold">✓</span>
-            )}
-          </button>
-        )}
-
-        {/* 2. CYBER SECURITY SUITE DROPDOWN (INDIGO / BLUE) */}
-        <div className="relative" ref={securityMenuRef}>
-          <button
-            onClick={() => {
-              setSecurityMenuOpen(!securityMenuOpen);
-              setToolsMenuOpen(false);
-              setActionsMenuOpen(false);
-              setUserMenuOpen(false);
-            }}
-            title="Öppna Cybersäkerhetssviten (Försvar, Quiz, Incidents, Antivirus)"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
-              securityMenuOpen
-                ? 'bg-indigo-500/30 text-indigo-200 border-indigo-400 shadow-md shadow-indigo-950/50'
-                : totalThreats > 0
-                ? 'bg-gradient-to-r from-rose-500/20 via-indigo-500/20 to-cyan-500/20 text-cyan-200 border-indigo-500/50 hover:border-cyan-400'
-                : 'bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border-indigo-500/40 hover:border-indigo-400'
-            }`}
-          >
-            <Shield className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="font-bold">Säkerhet</span>
-            {incidentCount > 0 ? (
-              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-slate-950 text-[10px] font-black font-mono">
-                {incidentCount}
-              </span>
-            ) : (
-              <ChevronDown className={`w-3 h-3 text-indigo-400 transition-transform ${securityMenuOpen ? 'rotate-180' : ''}`} />
-            )}
-          </button>
-
-          {/* Security Suite Popover Menu */}
-          {securityMenuOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-slate-950/95 backdrop-blur-xl border border-indigo-500/40 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-2.5 py-1.5 border-b border-indigo-900/50 mb-1 flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Cybersäkerhet & SOC</span>
-                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800">
-                  Blue Team v3.2
+        {/* Action Tools Cluster */}
+        <div className="flex items-center gap-1.5">
+          {/* Auto-Fix Diagnostic Button */}
+          {onOpenAutoRepair && (
+            <button
+              id="topbar-autofix-btn"
+              type="button"
+              onClick={onOpenAutoRepair}
+              title="Diagnostik & Automatisk Nätverksreparation"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 ${
+                issueCount > 0
+                  ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/60 animate-pulse shadow-rose-950/40'
+                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+              }`}
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${issueCount > 0 ? 'text-rose-400' : 'text-emerald-400'}`} />
+              <span className="hidden xl:inline font-bold">Diagnos</span>
+              {issueCount > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-slate-950 text-[10px] font-black font-mono">
+                  {issueCount}
                 </span>
-              </div>
-
-              <div className="space-y-1">
-                {onOpenCyberDefense && (
-                  <button
-                    onClick={() => {
-                      setSecurityMenuOpen(false);
-                      onOpenCyberDefense();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-cyan-950/40 hover:text-cyan-300 transition group cursor-pointer"
-                  >
-                    <div className="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 group-hover:bg-cyan-500/25 border border-cyan-500/30">
-                      <Shield className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold flex items-center gap-1.5">
-                        <span>Cyberförsvar & Skydd</span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 line-clamp-1">Nödisolering, honeypots & DDoS-scrubbing</p>
-                    </div>
-                  </button>
-                )}
-
-                {onOpenCyberQuiz && (
-                  <button
-                    onClick={() => {
-                      setSecurityMenuOpen(false);
-                      onOpenCyberQuiz();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-pink-950/40 hover:text-pink-300 transition group cursor-pointer"
-                  >
-                    <div className="p-1.5 rounded-lg bg-pink-500/15 text-pink-400 group-hover:bg-pink-500/25 border border-pink-500/30">
-                      <Brain className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold flex items-center justify-between">
-                        <span>Cyberquiz & Akademi</span>
-                        <span className="text-[10px] font-mono font-bold text-pink-300 bg-pink-950 px-1.5 rounded border border-pink-800">
-                          XP
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 line-clamp-1">Träna nätverk, klättra i ranking & quiz</p>
-                    </div>
-                  </button>
-                )}
-
-                {onOpenIncidentResponse && (
-                  <button
-                    onClick={() => {
-                      setSecurityMenuOpen(false);
-                      onOpenIncidentResponse();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-rose-950/40 hover:text-rose-300 transition group cursor-pointer"
-                  >
-                    <div className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400 group-hover:bg-rose-500/25 border border-rose-500/30">
-                      <ShieldAlert className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold flex items-center justify-between">
-                        <span>Incident Response & SOC</span>
-                        {incidentCount > 0 && (
-                          <span className="text-[10px] font-mono font-black text-rose-300 bg-rose-950 px-1.5 rounded border border-rose-800">
-                            {incidentCount} aktiva
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-slate-400 line-clamp-1">MITRE ATT&CK kill-chain & händelselogg</p>
-                    </div>
-                  </button>
-                )}
-
-                {onOpenAntivirus && (
-                  <button
-                    onClick={() => {
-                      setSecurityMenuOpen(false);
-                      onOpenAntivirus();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-emerald-950/40 hover:text-emerald-300 transition group cursor-pointer"
-                  >
-                    <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 group-hover:bg-emerald-500/25 border border-emerald-500/30">
-                      <ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold">Antivirus & EDR-agent</div>
-                      <p className="text-[10px] text-slate-400 line-clamp-1">Installera skydd, realtidsskanning & sanering</p>
-                    </div>
-                  </button>
-                )}
-
-                {onOpenCyberAwareness && (
-                  <button
-                    onClick={() => {
-                      setSecurityMenuOpen(false);
-                      onOpenCyberAwareness();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-amber-950/40 hover:text-amber-300 transition group cursor-pointer"
-                  >
-                    <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 group-hover:bg-amber-500/25 border border-amber-500/30">
-                      <Flame className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold">Hot-Map & Awareness</div>
-                      <p className="text-[10px] text-slate-400 line-clamp-1">Kartlägg sårbara noder och attackvektorer</p>
-                    </div>
-                  </button>
-                )}
-              </div>
-            </div>
+              ) : (
+                <span className="text-[10px] text-emerald-400 font-mono font-bold">✓</span>
+              )}
+            </button>
           )}
-        </div>
 
-        {/* 3. NETWORK TOOLS DROPDOWN (TEAL / CYAN) */}
-        <div className="relative" ref={toolsMenuRef}>
-          <button
-            onClick={() => {
-              setToolsMenuOpen(!toolsMenuOpen);
-              setSecurityMenuOpen(false);
-              setActionsMenuOpen(false);
-              setUserMenuOpen(false);
-            }}
-            title="Öppna Nätverksverktyg (Layout-optimerare, Subnät-kalkylator, Visual Debugger, Export)"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer ${
-              toolsMenuOpen
-                ? 'bg-teal-500/30 text-teal-200 border-teal-400 shadow-md shadow-teal-950/50'
-                : 'bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border-teal-500/40 hover:border-teal-400'
-            }`}
-          >
-            <Wand2 className="w-3.5 h-3.5 text-teal-400" />
-            <span className="hidden sm:inline font-bold">Verktyg</span>
-            <ChevronDown className={`w-3 h-3 text-teal-400 transition-transform ${toolsMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
+          {/* Cyber Security Suite Dropdown */}
+          <div className="relative" ref={securityMenuRef}>
+            <button
+              id="topbar-security-btn"
+              type="button"
+              onClick={() => {
+                setSecurityMenuOpen(!securityMenuOpen);
+                setToolsMenuOpen(false);
+                setActionsMenuOpen(false);
+                setUserMenuOpen(false);
+              }}
+              title="Öppna Cybersäkerhetssviten (Försvar, Quiz, Incidents, Antivirus)"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer active:scale-95 ${
+                securityMenuOpen
+                  ? 'bg-indigo-500/30 text-indigo-200 border-indigo-400 shadow-md shadow-indigo-950/50'
+                  : totalThreats > 0
+                  ? 'bg-gradient-to-r from-rose-500/20 via-indigo-500/20 to-cyan-500/20 text-cyan-200 border-indigo-500/50 hover:border-cyan-400'
+                  : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/40 hover:border-indigo-400'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline font-bold">Säkerhet</span>
+              {incidentCount > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-slate-950 text-[10px] font-black font-mono">
+                  {incidentCount}
+                </span>
+              ) : (
+                <ChevronDown className={`w-3 h-3 text-indigo-400 transition-transform ${securityMenuOpen ? 'rotate-180' : ''}`} />
+              )}
+            </button>
 
-          {/* Tools Menu Popover with Distinct Colors */}
-          {toolsMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-slate-950/95 backdrop-blur-xl border border-teal-500/40 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-2.5 py-1.5 border-b border-teal-900/50 mb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-teal-400">Verktyg & Hjälpmedel</span>
+            {/* Security Suite Popover Menu */}
+            {securityMenuOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-slate-950/95 backdrop-blur-xl border border-indigo-500/40 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-2.5 py-1.5 border-b border-indigo-900/50 mb-1 flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Cybersäkerhet & SOC</span>
+                  <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800">
+                    Blue Team
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  {onOpenCyberDefense && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSecurityMenuOpen(false);
+                        onOpenCyberDefense();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-cyan-950/40 hover:text-cyan-300 transition group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 group-hover:bg-cyan-500/25 border border-cyan-500/30">
+                        <Shield className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold flex items-center gap-1.5">
+                          <span>Cyberförsvar & Skydd</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 line-clamp-1">Nödisolering, honeypots & DDoS-scrubbing</p>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenCyberQuiz && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSecurityMenuOpen(false);
+                        onOpenCyberQuiz();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-pink-950/40 hover:text-pink-300 transition group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-pink-500/15 text-pink-400 group-hover:bg-pink-500/25 border border-pink-500/30">
+                        <Brain className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold flex items-center justify-between">
+                          <span>Cyberquiz & Akademi</span>
+                          <span className="text-[10px] font-mono font-bold text-pink-300 bg-pink-950 px-1.5 rounded border border-pink-800">
+                            XP
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 line-clamp-1">Träna nätverk, klättra i ranking & quiz</p>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenIncidentResponse && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSecurityMenuOpen(false);
+                        onOpenIncidentResponse();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-rose-950/40 hover:text-rose-300 transition group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400 group-hover:bg-rose-500/25 border border-rose-500/30">
+                        <ShieldAlert className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold flex items-center justify-between">
+                          <span>Incident Response & SOC</span>
+                          {incidentCount > 0 && (
+                            <span className="text-[10px] font-mono font-black text-rose-300 bg-rose-950 px-1.5 rounded border border-rose-800">
+                              {incidentCount} aktiva
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 line-clamp-1">MITRE ATT&CK kill-chain & händelselogg</p>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenAntivirus && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSecurityMenuOpen(false);
+                        onOpenAntivirus();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-emerald-950/40 hover:text-emerald-300 transition group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 group-hover:bg-emerald-500/25 border border-emerald-500/30">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold">Antivirus & EDR-agent</div>
+                        <p className="text-[10px] text-slate-400 line-clamp-1">Installera skydd, realtidsskanning & sanering</p>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenCyberAwareness && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSecurityMenuOpen(false);
+                        onOpenCyberAwareness();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-amber-950/40 hover:text-amber-300 transition group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 group-hover:bg-amber-500/25 border border-amber-500/30">
+                        <Flame className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold">Hot-Map & Awareness</div>
+                        <p className="text-[10px] text-slate-400 line-clamp-1">Kartlägg sårbara noder och attackvektorer</p>
+                      </div>
+                    </button>
+                  )}
+                </div>
               </div>
+            )}
+          </div>
 
-              <div className="space-y-1">
-                {onOpenLayoutOptimizer && (
+          {/* Tools Menu Dropdown */}
+          <div className="relative" ref={toolsMenuRef}>
+            <button
+              id="topbar-tools-btn"
+              type="button"
+              onClick={() => {
+                setToolsMenuOpen(!toolsMenuOpen);
+                setSecurityMenuOpen(false);
+                setActionsMenuOpen(false);
+                setUserMenuOpen(false);
+              }}
+              title="Öppna Nätverksverktyg (Layout, Subnät-kalkylator, Debugger, Export)"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer active:scale-95 ${
+                toolsMenuOpen
+                  ? 'bg-teal-500/30 text-teal-200 border-teal-400 shadow-md shadow-teal-950/50'
+                  : 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border-teal-500/40 hover:border-teal-400'
+              }`}
+            >
+              <Wand2 className="w-3.5 h-3.5 text-teal-400" />
+              <span className="hidden sm:inline font-bold">Verktyg</span>
+              <ChevronDown className={`w-3 h-3 text-teal-400 transition-transform ${toolsMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Tools Menu Popover */}
+            {toolsMenuOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-slate-950/95 backdrop-blur-xl border border-teal-500/40 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-2.5 py-1.5 border-b border-teal-900/50 mb-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-teal-400">Verktyg & Hjälpmedel</span>
+                </div>
+
+                <div className="space-y-1">
+                  {onOpenLayoutOptimizer && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolsMenuOpen(false);
+                        onOpenLayoutOptimizer();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-teal-950/40 hover:text-teal-300 transition group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-teal-500/15 text-teal-400 border border-teal-500/30">
+                        <Wand2 className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-semibold block">D3 Layout-optimerare</span>
+                        <span className="text-[10px] text-slate-400">Snygga till nodpositioner</span>
+                      </div>
+                    </button>
+                  )}
+
                   <button
+                    type="button"
                     onClick={() => {
                       setToolsMenuOpen(false);
-                      onOpenLayoutOptimizer();
+                      if (onToggleVisualDebugger) onToggleVisualDebugger();
                     }}
-                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-teal-950/40 hover:text-teal-300 transition group cursor-pointer"
+                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-purple-950/40 hover:text-purple-300 transition group cursor-pointer"
                   >
-                    <div className="p-1.5 rounded-lg bg-teal-500/15 text-teal-400 border border-teal-500/30">
-                      <Wand2 className="w-3.5 h-3.5" />
+                    <div className="p-1.5 rounded-lg bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                      <Bug className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1">
-                      <span className="font-semibold block">D3 Layout-optimerare</span>
-                      <span className="text-[10px] text-slate-400">Snygga till nodpositioner</span>
+                      <span className="font-semibold flex items-center justify-between">
+                        <span>Visual Debugger</span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
+                            showVisualDebugger ? 'bg-purple-500/20 text-purple-300' : 'bg-slate-800 text-slate-500'
+                          }`}
+                        >
+                          {showVisualDebugger ? 'PÅ' : 'AV'}
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-slate-400">IP & subnät-etiketter på canvas</span>
                     </div>
                   </button>
-                )}
 
-                <button
-                  onClick={() => {
-                    setToolsMenuOpen(false);
-                    if (onToggleVisualDebugger) onToggleVisualDebugger();
-                  }}
-                  className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-purple-950/40 hover:text-purple-300 transition group cursor-pointer"
-                >
-                  <div className="p-1.5 rounded-lg bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                    <Bug className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex-1">
-                    <span className="font-semibold flex items-center justify-between">
-                      <span>Visual Debugger</span>
-                      <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
-                          showVisualDebugger ? 'bg-purple-500/20 text-purple-300' : 'bg-slate-800 text-slate-500'
-                        }`}
-                      >
-                        {showVisualDebugger ? 'PÅ' : 'AV'}
-                      </span>
-                    </span>
-                    <span className="text-[10px] text-slate-400">IP & subnät-etiketter på canvas</span>
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsMenuOpen(false);
+                      onOpenSubnetCalc();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-sky-950/40 hover:text-sky-300 transition group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                      <Calculator className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-semibold block">Subnät-kalkylator</span>
+                      <span className="text-[10px] text-slate-400">CIDR, masker & subnätberäkning</span>
+                    </div>
+                  </button>
 
-                <button
-                  onClick={() => {
-                    setToolsMenuOpen(false);
-                    onOpenSubnetCalc();
-                  }}
-                  className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-sky-950/40 hover:text-sky-300 transition group cursor-pointer"
-                >
-                  <div className="p-1.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                    <Calculator className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex-1">
-                    <span className="font-semibold block">Subnät-kalkylator</span>
-                    <span className="text-[10px] text-slate-400">CIDR, masker & subnätberäkning</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setToolsMenuOpen(false);
-                    onOpenExportImport();
-                  }}
-                  className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-lime-950/40 hover:text-lime-300 transition group cursor-pointer"
-                >
-                  <div className="p-1.5 rounded-lg bg-lime-500/15 text-lime-400 border border-lime-500/30">
-                    <Download className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex-1">
-                    <span className="font-semibold block">Export / Import</span>
-                    <span className="text-[10px] text-slate-400">Spara & ladda JSON-topologi</span>
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsMenuOpen(false);
+                      onOpenExportImport();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-lime-950/40 hover:text-lime-300 transition group cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-lime-500/15 text-lime-400 border border-lime-500/30">
+                      <Download className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-semibold block">Export / Import</span>
+                      <span className="text-[10px] text-slate-400">Spara & ladda JSON-topologi</span>
+                    </div>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* 4. HISTORY: UNDO / REDO BUTTONS */}
-        <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800 p-0.5">
+        <div className="h-5 w-px bg-slate-800/80" />
+
+        {/* History: Undo / Redo */}
+        <div className="flex items-center bg-slate-900/90 rounded-lg border border-slate-800 p-0.5 shadow-inner">
           <button
+            id="topbar-undo-btn"
+            type="button"
             onClick={onUndo}
             disabled={!canUndo}
             title="Ångra ändring (Ctrl+Z)"
@@ -759,6 +812,8 @@ export const Topbar: React.FC<TopbarProps> = ({
             <Undo2 className="w-3.5 h-3.5" />
           </button>
           <button
+            id="topbar-redo-btn"
+            type="button"
             onClick={onRedo}
             disabled={!canRedo}
             title="Gör om ändring (Ctrl+Y / Cmd+Shift+Z)"
@@ -772,9 +827,11 @@ export const Topbar: React.FC<TopbarProps> = ({
           </button>
         </div>
 
-        {/* 5. CANVAS RESET / CLEAR MENU */}
+        {/* Canvas Reset Menu */}
         <div className="relative" ref={actionsMenuRef}>
           <button
+            id="topbar-reset-btn"
+            type="button"
             onClick={() => {
               setActionsMenuOpen(!actionsMenuOpen);
               setSecurityMenuOpen(false);
@@ -782,7 +839,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               setUserMenuOpen(false);
             }}
             title="Återställ eller rensa arbetsyta"
-            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition cursor-pointer active:scale-95"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
@@ -790,6 +847,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           {actionsMenuOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-slate-950/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <button
+                type="button"
                 onClick={() => {
                   setActionsMenuOpen(false);
                   onResetDemo();
@@ -800,6 +858,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 <span>Återställ exempel</span>
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setActionsMenuOpen(false);
                   onClearAll();
@@ -813,21 +872,25 @@ export const Topbar: React.FC<TopbarProps> = ({
           )}
         </div>
 
-        {/* 6. GLOBAL SETTINGS BUTTON (FUCHSIA / PINK) */}
+        {/* Global Settings */}
         {onOpenSettings && (
           <button
+            id="topbar-settings-btn"
+            type="button"
             onClick={onOpenSettings}
-            title="Öppna Inställningar (Tema, Ljud, Bakgrundseffekter, Nätverksparametrar)"
-            className="p-1.5 rounded-lg bg-fuchsia-500/15 hover:bg-fuchsia-500/25 text-fuchsia-300 border border-fuchsia-500/40 hover:border-fuchsia-400 transition cursor-pointer shadow-sm shadow-fuchsia-500/10"
+            title="Öppna Inställningar (Tema, Ljud, Bakgrundseffekter)"
+            className="p-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 hover:border-fuchsia-400 transition cursor-pointer shadow-xs active:scale-95"
           >
             <Sliders className="w-3.5 h-3.5 text-fuchsia-400" />
           </button>
         )}
 
-        {/* 7. USER PROFILE & LOGOUT */}
+        {/* User Profile & Account Menu */}
         {currentUser && (
           <div className="relative" ref={userMenuRef}>
             <button
+              id="topbar-user-profile-btn"
+              type="button"
               onClick={() => {
                 setUserMenuOpen(!userMenuOpen);
                 setSecurityMenuOpen(false);
@@ -835,7 +898,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 setActionsMenuOpen(false);
               }}
               title="Användarprofil & Kontomeny"
-              className="flex items-center gap-2 bg-slate-900 hover:bg-slate-850 pl-1.5 pr-2 py-1 rounded-xl border border-slate-800 hover:border-slate-700 transition cursor-pointer"
+              className="flex items-center gap-2 bg-slate-900/90 hover:bg-slate-850 pl-1.5 pr-2 py-1 rounded-xl border border-slate-800 hover:border-slate-700 transition cursor-pointer active:scale-95 shadow-xs"
             >
               <UserAvatar
                 avatarId={userProfile?.avatarId || 'avatar_cyber_hacker'}
@@ -844,12 +907,12 @@ export const Topbar: React.FC<TopbarProps> = ({
                 size="sm"
                 status={userProfile?.statusBadge || 'active'}
               />
-              <div className="hidden md:flex flex-col text-left">
-                <span className="text-[11px] font-bold text-white font-orbitron truncate max-w-[80px] leading-tight">
+              <div className="hidden lg:flex flex-col text-left">
+                <span className="text-[11px] font-bold text-white font-orbitron truncate max-w-[75px] leading-tight">
                   {userProfile?.username || currentUser.username}
                 </span>
-                <span className="text-[9px] font-mono text-cyan-400/80 leading-none truncate max-w-[80px]">
-                  {userProfile?.roleTitle || 'Nätverksarkitekt'}
+                <span className="text-[9px] font-mono text-cyan-400/80 leading-none truncate max-w-[75px]">
+                  {userProfile?.roleTitle || 'Arkitekt'}
                 </span>
               </div>
               <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
@@ -866,11 +929,11 @@ export const Topbar: React.FC<TopbarProps> = ({
                     size="sm"
                     status={userProfile?.statusBadge || 'active'}
                   />
-                  <div className="flex flex-col">
+                  <div className="flex flex-col min-w-0">
                     <span className="text-xs font-bold text-white font-orbitron truncate">
                       {userProfile?.username || currentUser.username}
                     </span>
-                    <span className="text-[10px] font-mono text-cyan-400">
+                    <span className="text-[10px] font-mono text-cyan-400 truncate">
                       {userProfile?.roleTitle || 'Nätverksarkitekt'}
                     </span>
                     <span className="text-[9px] text-slate-500 font-sans truncate max-w-[130px]">
@@ -882,6 +945,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 <div className="space-y-1">
                   {onOpenSettings && (
                     <button
+                      type="button"
                       onClick={() => {
                         setUserMenuOpen(false);
                         onOpenSettings();
@@ -895,6 +959,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
                   {onLogout && (
                     <button
+                      type="button"
                       onClick={() => {
                         setUserMenuOpen(false);
                         onLogout();
