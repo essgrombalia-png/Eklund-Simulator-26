@@ -76,7 +76,7 @@ import {
   isHackerDevice,
 } from './utils/hackerEngine';
 import { optimizeNetworkLayout } from './utils/d3Layout';
-import { Play, ArrowRight, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles, Zap, Wrench, Skull, ShieldAlert, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Play, ArrowRight, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles, Zap, Wrench, Skull, ShieldAlert, ChevronRight, ChevronLeft, Terminal } from 'lucide-react';
 import { useHistory } from './hooks/useHistory';
 import { useRef } from 'react';
 
@@ -322,6 +322,7 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<'canvas' | 'terminal' | 'packets' | 'traffic' | 'stats'>('canvas');
+  const [showMiniTerminal, setShowMiniTerminal] = useState(false);
 
   // Modals
   const [showSubnetCalc, setShowSubnetCalc] = useState(false);
@@ -1361,6 +1362,8 @@ export default function App() {
         lastAutoSavedTime={lastAutoSavedTime}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        showMiniTerminal={showMiniTerminal}
+        onToggleMiniTerminal={() => setShowMiniTerminal((prev) => !prev)}
         showVisualDebugger={showVisualDebugger}
         onToggleVisualDebugger={() => setShowVisualDebugger((prev) => !prev)}
         canUndo={canUndo}
@@ -1497,7 +1500,26 @@ export default function App() {
               onSelectCableType={setActiveCableType}
               onQuickStart={handleQuickStart}
               onSelectScenarioPreset={handleSelectScenarioPreset}
+              isPaletteCollapsed={isPaletteCollapsed}
             />
+          )}
+
+          {/* Floating Mini-Terminal Overlay */}
+          {activeTab === 'canvas' && showMiniTerminal && (
+            <div className="absolute bottom-4 right-4 z-30 w-full max-w-xl px-2 sm:px-0">
+              <DeviceTerminal
+                nodes={nodes}
+                links={links}
+                initialNodeId={selectedNodeId}
+                onUpdateNode={handleUpdateNode}
+                isMini={true}
+                onClose={() => setShowMiniTerminal(false)}
+                onMaximize={() => {
+                  setShowMiniTerminal(false);
+                  setActiveTab('terminal');
+                }}
+              />
+            </div>
           )}
 
           {activeTab === 'terminal' && (
@@ -1646,15 +1668,31 @@ export default function App() {
                 {pingLogs[pingLogs.length - 1]}
               </div>
             </div>
-            {detectedIssues.length > 0 && (
+            <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => setShowAutoRepairModal(true)}
-                className="shrink-0 px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                type="button"
+                onClick={() => setShowMiniTerminal((prev) => !prev)}
+                title="Växla Mini-Terminal overlay"
+                className={`px-2 py-0.5 rounded border text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                  showMiniTerminal
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-500/20'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800'
+                }`}
               >
-                <AlertTriangle className="w-3 h-3 text-rose-400" />
-                <span>{detectedIssues.length} fel funna</span>
+                <Terminal className="w-3 h-3 text-emerald-400" />
+                <span>{showMiniTerminal ? 'Dölj Mini-CLI' : 'Mini-CLI'}</span>
               </button>
-            )}
+
+              {detectedIssues.length > 0 && (
+                <button
+                  onClick={() => setShowAutoRepairModal(true)}
+                  className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                >
+                  <AlertTriangle className="w-3 h-3 text-rose-400" />
+                  <span>{detectedIssues.length} fel funna</span>
+                </button>
+              )}
+            </div>
           </div>
         </footer>
       )}

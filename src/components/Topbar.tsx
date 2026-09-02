@@ -67,6 +67,8 @@ interface TopbarProps {
   lastAutoSavedTime?: string | null;
   activeTab: 'canvas' | 'terminal' | 'packets' | 'traffic' | 'stats';
   setActiveTab: (tab: 'canvas' | 'terminal' | 'packets' | 'traffic' | 'stats') => void;
+  showMiniTerminal?: boolean;
+  onToggleMiniTerminal?: () => void;
   showVisualDebugger?: boolean;
   onToggleVisualDebugger?: () => void;
   canUndo?: boolean;
@@ -110,6 +112,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   lastAutoSavedTime,
   activeTab,
   setActiveTab,
+  showMiniTerminal = false,
+  onToggleMiniTerminal,
   showVisualDebugger = false,
   onToggleVisualDebugger,
   canUndo = false,
@@ -396,6 +400,22 @@ export const Topbar: React.FC<TopbarProps> = ({
           <Terminal className="w-3.5 h-3.5 text-emerald-400" />
           <span className="hidden sm:inline">Terminal</span>
         </button>
+
+        {activeTab === 'canvas' && onToggleMiniTerminal && (
+          <button
+            onClick={onToggleMiniTerminal}
+            title="Växla Mini-Terminal (Flytande fönster i Canvas)"
+            className={`flex items-center gap-1 px-2.5 py-1.2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              showMiniTerminal
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-sm shadow-emerald-500/20'
+                : 'text-emerald-400/80 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent'
+            }`}
+          >
+            <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden xl:inline">Mini-CLI</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${showMiniTerminal ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+          </button>
+        )}
 
         <button
           onClick={() => {

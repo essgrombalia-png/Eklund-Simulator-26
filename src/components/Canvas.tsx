@@ -104,6 +104,7 @@ interface CanvasProps {
   onDragEnd?: () => void;
   currentThemeId?: SimulatorThemeId;
   isLightMode?: boolean;
+  isPaletteCollapsed?: boolean;
 }
 
 // Convert dotted-decimal subnet mask to CIDR prefix (e.g., 255.255.255.0 -> /24)
@@ -288,6 +289,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   onDragEnd,
   currentThemeId,
   isLightMode,
+  isPaletteCollapsed = false,
 }) => {
   const isLight = isLightMode || currentThemeId === 'blueprint_light';
   const [internalDebugger, setInternalDebugger] = useState(false);
@@ -511,6 +513,62 @@ export const Canvas: React.FC<CanvasProps> = ({
   noteDragOffsetRef.current = noteDragOffset;
   const onUpdateStickyNoteRef = useRef(onUpdateStickyNote);
   onUpdateStickyNoteRef.current = onUpdateStickyNote;
+
+  // Multi-touch Pinch-to-Zoom Reference for iPad & Touch Devices
+  const pinchStartRef = useRef<{ dist: number; initialZoom: number } | null>(null);
+
+  // Dedicated Viewport navigation & Zoom controls (usable from toolbar, bottom corner & touch)
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(2.5, +(prev + 0.15).toFixed(2)));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(0.3, +(prev - 0.15).toFixed(2)));
+  };
+
+  const handleResetView = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleFitView = () => {
+    if (nodes.length === 0) {
+      handleResetView();
+      return;
+    }
+    if (!containerRef.current) return;
+    const containerW = containerRef.current.clientWidth || 1000;
+    const containerH = containerRef.current.clientHeight || 700;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    nodes.forEach((n) => {
+      if (n.x < minX) minX = n.x;
+      if (n.x > maxX) maxX = n.x;
+      if (n.y < minY) minY = n.y;
+      if (n.y > maxY) maxY = n.y;
+    });
+
+    const padding = 120;
+    const width = Math.max(200, maxX - minX + padding * 2);
+    const height = Math.max(200, maxY - minY + padding * 2);
+
+    const scaleX = containerW / width;
+    const scaleY = containerH / height;
+    const newZoom = Math.min(Math.max(0.4, Math.min(scaleX, scaleY)), 1.5);
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    setZoom(+newZoom.toFixed(2));
+    setPan({
+      x: Math.round(containerW / 2 - centerX * newZoom),
+      y: Math.round(containerH / 2 - centerY * newZoom),
+    });
+  };
 
   // Global mousemove & mouseup listeners for ultra-smooth drag & drop / panning / cable connecting
   useEffect(() => {
@@ -746,6 +804,21 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     const handleGlobalTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 0 || !containerRef.current) return;
+
+      // Handle 2-finger pinch to zoom on touch screens (iPad / Tablet)
+      if (e.touches.length === 2 && pinchStartRef.current) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        if (pinchStartRef.current.dist > 10) {
+          const factor = currentDist / pinchStartRef.current.dist;
+          const nextZoom = Math.min(2.5, Math.max(0.3, +(pinchStartRef.current.initialZoom * factor).toFixed(2)));
+          setZoom(nextZoom);
+        }
+        return;
+      }
+
       const touch = e.touches[0];
       const wasInteracting = isPanningRef.current || draggingNodeIdRef.current || draggingContainerIdRef.current || draggingNoteIdRef.current;
       if (wasInteracting) {
@@ -760,6 +833,9 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
 
     const handleGlobalTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        pinchStartRef.current = null;
+      }
       const touch = e.changedTouches[0];
       if (touch) {
         const fakeEvent = {
@@ -1008,6 +1084,16 @@ export const Canvas: React.FC<CanvasProps> = ({
   };
 
   const handleCanvasTouchStart = (e: React.TouchEvent) => {
+    // Two-finger touch initiates pinch-to-zoom on iPad
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      pinchStartRef.current = { dist, initialZoom: zoomRef.current };
+      setIsPanning(false);
+      return;
+    }
+
     if (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'svg') {
       const touch = e.touches[0];
       if (touch) {
@@ -1033,9 +1119,9 @@ export const Canvas: React.FC<CanvasProps> = ({
       style={getCanvasBackground()}
     >
       {/* Zoom / Viewport & Grid Controls Overlay */}
-      <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl shadow-lg backdrop-blur-md">
+      <div className={`absolute top-4 ${isPaletteCollapsed ? 'left-14' : 'left-4'} z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl shadow-lg backdrop-blur-md transition-all duration-200`}>
         <button
-          onClick={() => setZoom((z) => Math.min(2.0, z + 0.15))}
+          onClick={handleZoomIn}
           title="Zooma in"
           className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
         >
@@ -1045,17 +1131,14 @@ export const Canvas: React.FC<CanvasProps> = ({
           {Math.round(zoom * 100)}%
         </span>
         <button
-          onClick={() => setZoom((z) => Math.max(0.4, z - 0.15))}
+          onClick={handleZoomOut}
           title="Zooma ut"
           className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
-          onClick={() => {
-            setZoom(1);
-            setPan({ x: 0, y: 0 });
-          }}
+          onClick={handleResetView}
           title="Återställ vy (100% & centrerad)"
           className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
         >
@@ -2641,11 +2724,74 @@ export const Canvas: React.FC<CanvasProps> = ({
         containerRef={containerRef}
         onPanChange={setPan}
         onZoomChange={setZoom}
-        onResetView={() => {
-          setZoom(1);
-          setPan({ x: 0, y: 0 });
-        }}
+        onResetView={handleResetView}
       />
+
+      {/* Dedicated Touch-Friendly Viewport Controls in Lower Corner (iPad / Mobile / Desktop) */}
+      <div
+        id="canvas-viewport-controls"
+        className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-20 flex items-center gap-1 bg-slate-900/95 border border-slate-800/90 p-1.5 rounded-2xl shadow-2xl backdrop-blur-xl select-none"
+        aria-label="Canvas navigering och zoomkontroller"
+      >
+        {/* Zoom In Button (min 44px on touch for iPad) */}
+        <button
+          id="canvas-zoom-in-btn"
+          type="button"
+          onClick={handleZoomIn}
+          title="Zooma in (+15%) eller nyp med två fingrar på iPad"
+          className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 active:scale-95 transition-all border border-slate-800/80 cursor-pointer shadow-sm"
+        >
+          <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-cyan-400" />
+        </button>
+
+        {/* Zoom percentage readout / Quick toggle */}
+        <button
+          id="canvas-zoom-indicator-btn"
+          type="button"
+          onClick={handleResetView}
+          title="Klicka för att återställa till 100%"
+          className="h-11 sm:h-9 px-2 flex items-center justify-center text-xs font-mono font-bold text-slate-300 hover:text-cyan-300 transition-colors min-w-[50px] cursor-pointer"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+
+        {/* Zoom Out Button */}
+        <button
+          id="canvas-zoom-out-btn"
+          type="button"
+          onClick={handleZoomOut}
+          title="Zooma ut (-15%)"
+          className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 active:scale-95 transition-all border border-slate-800/80 cursor-pointer shadow-sm"
+        >
+          <ZoomOut className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-cyan-400" />
+        </button>
+
+        <div className="w-px h-5 bg-slate-800 mx-0.5" />
+
+        {/* Reset View Button */}
+        <button
+          id="canvas-reset-view-btn"
+          type="button"
+          onClick={handleResetView}
+          title="Återställ vy (100% och centrerad)"
+          className="h-11 px-3 sm:h-9 sm:px-2.5 flex items-center gap-1.5 rounded-xl bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 active:scale-95 transition-all border border-slate-800/80 cursor-pointer text-xs font-semibold shadow-sm"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-[11px] font-mono hidden sm:inline">Återställ</span>
+        </button>
+
+        {/* Fit View to Topology Button */}
+        <button
+          id="canvas-fit-view-btn"
+          type="button"
+          onClick={handleFitView}
+          title="Centrera och anpassa vyn till alla nätverksenheter på skärmen"
+          className="h-11 px-3 sm:h-9 sm:px-2.5 flex items-center gap-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:border-cyan-500/60 active:scale-95 transition-all cursor-pointer text-xs font-semibold shadow-sm"
+        >
+          <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-[11px] font-mono hidden sm:inline">Anpassa</span>
+        </button>
+      </div>
     </div>
   );
 };
