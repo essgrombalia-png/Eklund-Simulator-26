@@ -1389,8 +1389,8 @@ export default function App() {
         {activeTab === 'canvas' && (
           <div className={`transition-all duration-300 ease-in-out flex shrink-0 ${
             isPaletteCollapsed 
-              ? 'w-0 -translate-x-full absolute md:relative z-40' 
-              : 'w-72 translate-x-0 absolute md:static z-40 h-full'
+              ? 'w-0 -translate-x-full absolute lg:relative z-40' 
+              : 'w-72 translate-x-0 absolute lg:static z-40 h-full'
           }`}>
             <Palette
               onAddDevice={handleAddDevice}

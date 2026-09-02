@@ -627,11 +627,13 @@ export const Canvas: React.FC<CanvasProps> = ({
         // 2. Magnetic Grid Snapping
         if (snapToGridRef.current) {
           const g = gridSizeRef.current || 40;
-          if (!guides.some((g) => g.type === 'x')) {
+          if (!guides.some((item) => item.type === 'x')) {
             finalX = Math.round(finalX / g) * g;
+            guides.push({ type: 'x', coord: finalX, label: `Grid X: ${finalX}px` });
           }
-          if (!guides.some((g) => g.type === 'y')) {
+          if (!guides.some((item) => item.type === 'y')) {
             finalY = Math.round(finalY / g) * g;
+            guides.push({ type: 'y', coord: finalY, label: `Grid Y: ${finalY}px` });
           }
         }
 
@@ -2171,7 +2173,14 @@ export const Canvas: React.FC<CanvasProps> = ({
                     onMultiSelectNodes([node.id]);
                   }
                   setDraggingNodeId(node.id);
-                  setDragOffset({ x: 0, y: 0 });
+                  if (containerRef.current) {
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const mouseCanvasX = (e.clientX - rect.left - pan.x) / zoom;
+                    const mouseCanvasY = (e.clientY - rect.top - pan.y) / zoom;
+                    setDragOffset({ x: mouseCanvasX - node.x, y: mouseCanvasY - node.y });
+                  } else {
+                    setDragOffset({ x: 0, y: 0 });
+                  }
                   onDragStart?.();
                 }
               }}
@@ -2182,7 +2191,15 @@ export const Canvas: React.FC<CanvasProps> = ({
                   onMultiSelectNodes([node.id]);
                 }
                 setDraggingNodeId(node.id);
-                setDragOffset({ x: 0, y: 0 });
+                if (containerRef.current && e.touches[0]) {
+                  const rect = containerRef.current.getBoundingClientRect();
+                  const touch = e.touches[0];
+                  const touchCanvasX = (touch.clientX - rect.left - pan.x) / zoom;
+                  const touchCanvasY = (touch.clientY - rect.top - pan.y) / zoom;
+                  setDragOffset({ x: touchCanvasX - node.x, y: touchCanvasY - node.y });
+                } else {
+                  setDragOffset({ x: 0, y: 0 });
+                }
                 onDragStart?.();
               }}
               className="z-10 group select-none cursor-pointer"

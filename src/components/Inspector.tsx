@@ -199,7 +199,7 @@ export const Inspector: React.FC<InspectorProps> = ({
     <aside
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
-      className="w-full max-w-sm sm:w-80 bg-slate-900 border-l border-slate-800 flex flex-col h-full overflow-hidden shrink-0 shadow-2xl z-40 absolute right-0 top-0 sm:static h-full animate-slide-left select-text"
+      className="w-full max-w-sm sm:w-80 bg-slate-900 border-l border-slate-800 flex flex-col h-full overflow-hidden shrink-0 shadow-2xl z-40 absolute right-0 top-0 lg:static h-full animate-slide-left select-text"
     >
       {/* Header */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">

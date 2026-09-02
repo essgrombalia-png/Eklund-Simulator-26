@@ -201,8 +201,12 @@ export function optimizeNetworkLayout(
     const minY = padding;
     const maxY = Math.max(padding + 200, height - padding);
 
-    const clampedX = Math.round(Math.max(minX, Math.min(maxX, n.x || centerX)));
-    const clampedY = Math.round(Math.max(minY, Math.min(maxY, n.y || centerY)));
+    const gridStep = 40;
+    const rawX = Math.max(minX, Math.min(maxX, n.x || centerX));
+    const rawY = Math.max(minY, Math.min(maxY, n.y || centerY));
+
+    const clampedX = Math.round(rawX / gridStep) * gridStep;
+    const clampedY = Math.round(rawY / gridStep) * gridStep;
 
     return {
       ...n.device,
