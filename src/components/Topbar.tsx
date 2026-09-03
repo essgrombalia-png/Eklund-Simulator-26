@@ -136,6 +136,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const securityMenuRef = useRef<HTMLDivElement>(null);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
@@ -209,7 +210,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           )}
 
           {/* Quick Architecture Preset Dropdown */}
-          <div className="relative hidden md:block">
+          <div className="relative hidden xl:block">
             <select
               id="topbar-architecture-select"
               value={currentScenarioId || 'custom'}
@@ -379,8 +380,81 @@ export const Topbar: React.FC<TopbarProps> = ({
 
       {/* ─── ZONE 3: RIGHT (Search, Action Tools & Profile) ─── */}
       <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
-        {/* Dynamic Search Bar */}
-        <div className="relative hidden md:block" ref={searchContainerRef}>
+        {/* Tablet / Mobile Search Toggle Button */}
+        <div className="relative lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+            title="Sök noder och enheter"
+            className={`p-2 rounded-lg border transition cursor-pointer flex items-center justify-center ${
+              mobileSearchOpen
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                : 'bg-[#100d0a] hover:bg-[#18130e] text-stone-400 hover:text-stone-200 border-[#2c2219]'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Floating Dropdown for Tablet/Mobile Search */}
+          {mobileSearchOpen && (
+            <div className="fixed inset-x-2.5 top-16 z-50 p-2.5 rounded-xl bg-[#14110e]/98 border border-[#2c2219] shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Sök nodnamn, IP, MAC, VLAN..."
+                  className="w-full bg-[#100d0a] border border-[#2c2219] focus:border-amber-500/80 rounded-lg text-sm pl-9 pr-9 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500/40 text-stone-200 shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileSearchOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {searchQuery.trim() !== '' && (
+                <div className="mt-2 max-h-60 overflow-y-auto space-y-1 custom-scrollbar">
+                  {filteredNodes.length === 0 ? (
+                    <div className="text-center py-3 text-xs text-slate-500 font-medium">
+                      Inga enheter matchar "{searchQuery}"
+                    </div>
+                  ) : (
+                    filteredNodes.map((node) => (
+                      <button
+                        key={node.id}
+                        type="button"
+                        onClick={() => {
+                          if (onSelectNode) onSelectNode(node.id);
+                          setActiveTab('canvas');
+                          setSearchQuery('');
+                          setMobileSearchOpen(false);
+                        }}
+                        className="w-full text-left flex items-center justify-between p-2 rounded-lg hover:bg-slate-900/90 border border-transparent hover:border-slate-800 transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                          <span className="font-semibold text-xs text-slate-200">{node.name}</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">{node.ip || 'DHCP'}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Dynamic Search Bar (Desktop) */}
+        <div className="relative hidden lg:block" ref={searchContainerRef}>
           <div className="relative">
             <input
               id="topbar-node-search"

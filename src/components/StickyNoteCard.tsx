@@ -395,6 +395,8 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
 
           <button
             type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               titleInputRef.current?.focus();
@@ -408,7 +410,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         </div>
 
         {/* Note Controls */}
-        <div className="flex items-center gap-1 shrink-0" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1 shrink-0" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
           {/* Settings / Opacity Menu Toggle */}
           <button
             type="button"
@@ -523,6 +525,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         <div
           className="p-2.5 border-b border-current/20 bg-black/35 backdrop-blur-md flex flex-col gap-2 animate-fade-in text-[10px]"
           onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           {/* Header of settings drawer */}
           <div className="flex items-center justify-between gap-1.5">
@@ -629,6 +632,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         <div
           className="p-2 border-b border-current/20 bg-black/25 backdrop-blur-md flex items-center justify-between gap-1.5 animate-fade-in text-[10px]"
           onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-1">
             <span className="font-mono font-bold opacity-75 mr-0.5">Storlek:</span>
@@ -686,6 +690,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         <div
           className="p-2 border-b border-current/20 bg-black/20 backdrop-blur-md flex items-center justify-around gap-1 animate-fade-in"
           onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           {PALETTE_COLORS.map((c) => (
             <button
@@ -702,7 +707,11 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
       )}
 
       {/* Note Body (Rubrikfält & Text Area) */}
-      <div className="p-2.5 flex-1 flex flex-col gap-2 min-h-0 relative" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="p-2.5 flex-1 flex flex-col gap-2 min-h-0 relative"
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
         {/* Dedikerat Rubrikfält för att namnge anteckningen */}
         <div
           className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all shrink-0 ${

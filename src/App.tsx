@@ -195,6 +195,9 @@ export default function App() {
       updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     updateTopology({ stickyNotes: (prev) => [...prev, newNote] }, 'Lade till digital Post-it');
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsPaletteCollapsed(true);
+    }
   };
 
   const handleUpdateStickyNote = (updatedNote: StickyNote) => {
@@ -323,6 +326,13 @@ export default function App() {
   const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   });
+
+  // On tablet/iPad and mobile screens, automatically collapse palette when selecting an item to inspect
+  useEffect(() => {
+    if ((selectedNodeId || selectedLinkId || selectedContainerId) && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsPaletteCollapsed(true);
+    }
+  }, [selectedNodeId, selectedLinkId, selectedContainerId]);
 
   const [activeTab, setActiveTab] = useState<'canvas' | 'terminal' | 'packets' | 'traffic' | 'stats'>('canvas');
   const [showMiniTerminal, setShowMiniTerminal] = useState(false);
@@ -943,6 +953,9 @@ export default function App() {
     updateTopology({ nodes: [...nodes, newNode] }, `La till enhet: ${newNode.name}`);
     setSelectedNodeId(newNode.id);
     setSelectedLinkId(null);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsPaletteCollapsed(true);
+    }
   };
 
   const handleAddNodeAtPosition = (type: DeviceType, x: number, y: number) => {
@@ -1617,32 +1630,44 @@ export default function App() {
 
         {/* Right Inspector Drawer */}
         {activeTab === 'canvas' && (selectedNode || selectedLink || selectedContainer) && (
-          <Inspector
-            selectedNode={selectedNode}
-            selectedLink={selectedLink}
-            selectedContainer={selectedContainer}
-            containers={containers}
-            nodes={nodes}
-            links={links}
-            onClose={() => {
-              setSelectedNodeId(null);
-              setSelectedNodeIds([]);
-              setSelectedLinkId(null);
-              setSelectedContainerId(null);
-            }}
-            onUpdateNode={handleUpdateNode}
-            onUpdateMultipleNodes={handleUpdateMultipleNodes}
-            onDeleteNode={handleDeleteNode}
-            onUpdateLink={handleUpdateLink}
-            onDeleteLink={handleDeleteLink}
-            onOpenIpModal={(node) => setIpConfigModalNode(node)}
-            onAddLink={handleAddLink}
-            onOpenAutoRepair={() => setShowAutoRepairModal(true)}
-            onAutoRepairNode={handleRepairNode}
-            onOpenContainerModal={handleOpenContainerModal}
-            onUpdateContainer={handleUpdateContainer}
-            onDeleteContainer={handleDeleteContainer}
-          />
+          <>
+            {/* Backdrop for iPad/mobile when Inspector is open */}
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs z-30 lg:hidden"
+              onClick={() => {
+                setSelectedNodeId(null);
+                setSelectedNodeIds([]);
+                setSelectedLinkId(null);
+                setSelectedContainerId(null);
+              }}
+            />
+            <Inspector
+              selectedNode={selectedNode}
+              selectedLink={selectedLink}
+              selectedContainer={selectedContainer}
+              containers={containers}
+              nodes={nodes}
+              links={links}
+              onClose={() => {
+                setSelectedNodeId(null);
+                setSelectedNodeIds([]);
+                setSelectedLinkId(null);
+                setSelectedContainerId(null);
+              }}
+              onUpdateNode={handleUpdateNode}
+              onUpdateMultipleNodes={handleUpdateMultipleNodes}
+              onDeleteNode={handleDeleteNode}
+              onUpdateLink={handleUpdateLink}
+              onDeleteLink={handleDeleteLink}
+              onOpenIpModal={(node) => setIpConfigModalNode(node)}
+              onAddLink={handleAddLink}
+              onOpenAutoRepair={() => setShowAutoRepairModal(true)}
+              onAutoRepairNode={handleRepairNode}
+              onOpenContainerModal={handleOpenContainerModal}
+              onUpdateContainer={handleUpdateContainer}
+              onDeleteContainer={handleDeleteContainer}
+            />
+          </>
         )}
       </div>
 

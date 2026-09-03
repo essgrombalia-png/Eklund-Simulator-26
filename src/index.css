@@ -13,10 +13,17 @@
 }
 
 /* Ensure all form inputs, text areas and selects are completely selectable and interactable */
-input, textarea, select, button, [contenteditable="true"] {
+input, textarea, select, [contenteditable="true"] {
   user-select: text !important;
   -webkit-user-select: text !important;
   pointer-events: auto !important;
+}
+
+button {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @layer utilities {
@@ -41,6 +48,13 @@ input, textarea, select, button, [contenteditable="true"] {
     touch-action: none !important;
     -webkit-touch-callout: none !important;
     overscroll-behavior: none !important;
+  }
+
+  /* iOS / iPad smooth scrolling for sidebars and panels */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 }
 

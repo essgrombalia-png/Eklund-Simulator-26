@@ -1219,13 +1219,20 @@ export const Canvas: React.FC<CanvasProps> = ({
     const handleGlobalTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 0 || !containerRef.current) return;
 
-      // Handle 2-finger pinch to zoom on touch screens (iPad / Tablet)
-      if (e.touches.length === 2 && pinchStartRef.current) {
+      // Robust 2-finger pinch to zoom on touch screens (iPad / Tablet)
+      if (e.touches.length === 2) {
         e.preventDefault();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
         const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-        if (pinchStartRef.current.dist > 10) {
+        if (!pinchStartRef.current) {
+          pinchStartRef.current = { dist: currentDist, initialZoom: zoomRef.current };
+          setIsPanning(false);
+          setDraggingNodeId(null);
+          setDraggingContainerId(null);
+          setDraggingNoteId(null);
+          setConnectingNodeId(null);
+        } else if (pinchStartRef.current.dist > 10) {
           const factor = currentDist / pinchStartRef.current.dist;
           const nextZoom = Math.min(2.5, Math.max(0.3, +(pinchStartRef.current.initialZoom * factor).toFixed(2)));
           setZoom(nextZoom);
@@ -1234,7 +1241,14 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
 
       const touch = e.touches[0];
-      const wasInteracting = isPanningRef.current || draggingNodeIdRef.current || draggingContainerIdRef.current || draggingNoteIdRef.current || isDraggingToolbarRef.current || isDraggingFocusHudRef.current;
+      const wasInteracting =
+        isPanningRef.current ||
+        draggingNodeIdRef.current ||
+        draggingContainerIdRef.current ||
+        draggingNoteIdRef.current ||
+        connectingNodeIdRef.current ||
+        isDraggingToolbarRef.current ||
+        isDraggingFocusHudRef.current;
       if (wasInteracting) {
         e.preventDefault();
       }
@@ -1267,12 +1281,14 @@ export const Canvas: React.FC<CanvasProps> = ({
     window.addEventListener('keydown', handleGlobalKeyDown);
     window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
     window.addEventListener('touchend', handleGlobalTouchEnd);
+    window.addEventListener('touchcancel', handleGlobalTouchEnd);
     return () => {
       window.removeEventListener('mousemove', handleGlobalMouseMove);
       window.removeEventListener('mouseup', handleGlobalMouseUp);
       window.removeEventListener('keydown', handleGlobalKeyDown);
       window.removeEventListener('touchmove', handleGlobalTouchMove);
       window.removeEventListener('touchend', handleGlobalTouchEnd);
+      window.removeEventListener('touchcancel', handleGlobalTouchEnd);
     };
   }, [onMultiSelectNodes]);
 
@@ -1522,13 +1538,21 @@ export const Canvas: React.FC<CanvasProps> = ({
       return;
     }
 
-    if (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'svg') {
+    const targetEl = e.target as HTMLElement;
+    const isInteractiveElement = targetEl.closest(
+      'button, input, textarea, select, [data-interactive="true"], .node-card, [data-node-id], [data-container-id], [data-sticky-id]'
+    );
+
+    if (!isInteractiveElement) {
       const touch = e.touches[0];
       if (touch) {
         onSelectNode(null);
         onSelectLink(null);
         if (onSelectContainer) onSelectContainer(null);
         if (onMultiSelectNodes) onMultiSelectNodes([]);
+        setConnectingNodeId(null);
+        setConnectingTargetNodeId(null);
+        setDragPointer(null);
         setIsPanning(true);
         setPanStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
       }
@@ -2728,7 +2752,11 @@ export const Canvas: React.FC<CanvasProps> = ({
                   ({memberNodes.length} st)
                 </span>
 
-                <div className="flex items-center gap-1 pl-1.5 border-l border-slate-700/80">
+                <div
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 pl-1.5 border-l border-slate-700/80"
+                >
                   {/* Collapse to Cloud button */}
                   <button
                     type="button"
@@ -2949,6 +2977,14 @@ export const Canvas: React.FC<CanvasProps> = ({
               }}
               onTouchStart={(e) => {
                 e.stopPropagation();
+                // If in cable connecting mode, tapping this node completes the cable connection immediately!
+                if (connectingNodeIdRef.current && connectingNodeIdRef.current !== node.id) {
+                  onAddLinkRef.current(connectingNodeIdRef.current, node.id);
+                  setConnectingNodeId(null);
+                  setConnectingTargetNodeId(null);
+                  setDragPointer(null);
+                  return;
+                }
                 if (selectedNodeIds.includes(node.id) && selectedNodeIds.length > 1) {
                   setMultiDragStart({
                     initialPositions: nodes
@@ -3242,6 +3278,22 @@ export const Canvas: React.FC<CanvasProps> = ({
                         setConnectingNodeId(node.id);
                         setDragPointer({ x: node.x, y: node.y });
                       }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        const touch = e.touches[0];
+                        if (touch) {
+                          connectStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+                        }
+                        if (connectingNodeIdRef.current && connectingNodeIdRef.current !== node.id) {
+                          onAddLinkRef.current(connectingNodeIdRef.current, node.id);
+                          setConnectingNodeId(null);
+                          setConnectingTargetNodeId(null);
+                          setDragPointer(null);
+                        } else {
+                          setConnectingNodeId(node.id);
+                          setDragPointer({ x: node.x, y: node.y });
+                        }
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (connectingNodeId && connectingNodeId !== node.id) {
@@ -3255,7 +3307,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                         }
                       }}
                       title="Klicka eller dra härifrån till en annan enhet för att ansluta kabel"
-                      className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-slate-950 flex items-center justify-center cursor-crosshair transition-all shadow-md z-20 ${
+                      className={`absolute -bottom-2 -right-2 w-7 h-7 sm:w-6 sm:h-6 rounded-full border-2 border-slate-950 flex items-center justify-center cursor-crosshair transition-all shadow-md z-20 ${
                         isConnectingSource
                           ? 'bg-amber-400 text-slate-950 ring-4 ring-amber-400/60 scale-110 animate-pulse'
                           : isConnectingTarget
@@ -3263,7 +3315,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                           : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 hover:scale-125 opacity-90 group-hover:opacity-100 shadow-cyan-500/50'
                       }`}
                     >
-                      <Cable className="w-3 h-3 stroke-[2.5]" />
+                      <Cable className="w-3.5 h-3.5 sm:w-3 sm:h-3 stroke-[2.5]" />
                     </button>
                   </div>
                 );

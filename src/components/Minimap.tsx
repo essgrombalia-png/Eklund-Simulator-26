@@ -34,7 +34,9 @@ export const Minimap: React.FC<MinimapProps> = ({
   onZoomChange,
   onResetView,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
+  });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const miniMapRef = useRef<HTMLDivElement>(null);
 
@@ -156,7 +158,11 @@ export const Minimap: React.FC<MinimapProps> = ({
   };
 
   return (
-    <div className="absolute bottom-16 right-4 z-30 flex flex-col items-end select-none font-mono">
+    <div
+      className="absolute bottom-16 right-4 z-30 flex flex-col items-end select-none font-mono"
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
       {/* Collapsed Toggle Button */}
       {isCollapsed ? (
         <button
