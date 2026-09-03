@@ -575,7 +575,7 @@ export const CATEGORY_THEMES: Record<
 
 interface PaletteProps {
   onAddDevice: (type: DeviceType) => void;
-  onAddStickyNote?: (x?: number, y?: number, text?: string, color?: StickyNoteColor) => void;
+  onAddStickyNote?: (x?: number, y?: number, text?: string, color?: StickyNoteColor, title?: string) => void;
   activeCableType?: CableType;
   onSelectCableType?: (type: CableType) => void;
   isCollapsed?: boolean;

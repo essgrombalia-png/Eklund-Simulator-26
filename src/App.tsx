@@ -181,10 +181,10 @@ export default function App() {
   };
 
   // Sticky Note Handlers
-  const handleAddStickyNote = (x?: number, y?: number, text?: string, color?: StickyNoteColor) => {
+  const handleAddStickyNote = (x?: number, y?: number, text?: string, color?: StickyNoteColor, title?: string) => {
     const newNote: StickyNote = {
       id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      title: 'Anteckning',
+      title: title ?? '',
       text: text ?? '',
       x: x ?? 320,
       y: y ?? 220,

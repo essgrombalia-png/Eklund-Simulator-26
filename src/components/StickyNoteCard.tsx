@@ -12,6 +12,9 @@ import {
   Maximize2,
   SlidersHorizontal,
   Eye,
+  Type,
+  X,
+  Edit2,
 } from 'lucide-react';
 import { StickyNote, StickyNoteColor } from '../types';
 
@@ -140,14 +143,14 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   onDelete,
   onDragStart,
 }) => {
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [titleInput, setTitleInput] = useState(note.title || 'Anteckning');
+  const [titleInput, setTitleInput] = useState(note.title || '');
   const [textInput, setTextInput] = useState(note.text || '');
   const [isResizing, setIsResizing] = useState(false);
   const [liveDimensions, setLiveDimensions] = useState<{ width: number; height: number } | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Sync state with note prop changes
   useEffect(() => {
@@ -155,7 +158,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   }, [note.text]);
 
   useEffect(() => {
-    setTitleInput(note.title || 'Anteckning');
+    setTitleInput(note.title || '');
   }, [note.title]);
 
   const onUpdateRef = useRef(onUpdate);
@@ -189,11 +192,14 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
     });
   };
 
-  const handleTitleBlur = () => {
-    setIsEditingTitle(false);
-    if (titleInput !== note.title) {
-      onUpdate({ ...note, title: titleInput });
-    }
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setTitleInput(val);
+    onUpdate({
+      ...note,
+      title: val,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -320,20 +326,32 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
 
   const handleInsertTemplate = (type: 'ip' | 'vlan' | 'security' | 'todo') => {
     let snippet = '';
+    let suggestedTitle = '';
     if (type === 'ip') {
       snippet = '\n• Subnät: 192.168.1.0/24\n• Gateway: 192.168.1.254\n• DNS: 1.1.1.1, 8.8.8.8';
+      suggestedTitle = 'IP-planering & Subnät';
     } else if (type === 'vlan') {
       snippet = '\n• VLAN 10: Ledning & Ekonomi\n• VLAN 20: Utveckling & IT\n• VLAN 30: Gäst Wi-Fi';
+      suggestedTitle = 'VLAN-arkitektur';
     } else if (type === 'security') {
       snippet = '\n🔒 Säkerhetsregel:\n- Endast HTTPS (443) tillåten från WAN\n- SSH begränsad till Bastion Host';
+      suggestedTitle = 'Säkerhetsregler';
     } else if (type === 'todo') {
       snippet = '\n[ ] Konfigurera brandvägg\n[ ] Testa ping & routning\n[ ] Verifiera DNS-uppslagning';
+      suggestedTitle = 'Checklista';
     }
 
     const updated = (textInput ? textInput.trim() + '\n' : '') + snippet.trimStart();
     setTextInput(updated);
+
+    const nextTitle = !titleInput.trim() || titleInput === 'Anteckning' ? suggestedTitle : titleInput;
+    if (nextTitle !== titleInput) {
+      setTitleInput(nextTitle);
+    }
+
     onUpdate({
       ...note,
+      title: nextTitle,
       text: updated,
       updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
@@ -375,27 +393,18 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span className={`w-2 h-2 rounded-full ${theme.accentDot} shrink-0 animate-pulse`} />
 
-          {isEditingTitle ? (
-            <input
-              type="text"
-              value={titleInput}
-              onChange={(e) => setTitleInput(e.target.value)}
-              onBlur={handleTitleBlur}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleTitleBlur();
-              }}
-              autoFocus
-              className={`w-full text-xs font-bold bg-transparent outline-none border-b border-current ${theme.titleColor}`}
-            />
-          ) : (
-            <span
-              onDoubleClick={() => setIsEditingTitle(true)}
-              title="Dubbelklicka för att ändra rubrik"
-              className={`text-xs font-extrabold truncate cursor-pointer hover:underline ${theme.titleColor}`}
-            >
-              {note.title || 'Anteckning'}
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              titleInputRef.current?.focus();
+            }}
+            title="Klicka för att namnge anteckning i rubrikfältet"
+            className={`text-xs font-extrabold truncate text-left cursor-pointer hover:underline flex items-center gap-1 min-w-0 ${theme.titleColor}`}
+          >
+            <span className="truncate">{note.title?.trim() ? note.title : 'Anteckning (namnlös)'}</span>
+            <Edit2 className="w-2.5 h-2.5 opacity-50 shrink-0" />
+          </button>
         </div>
 
         {/* Note Controls */}
@@ -692,8 +701,47 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         </div>
       )}
 
-      {/* Note Body Text Area */}
-      <div className="p-2.5 flex-1 flex flex-col gap-1.5 min-h-0 relative" onMouseDown={(e) => e.stopPropagation()}>
+      {/* Note Body (Rubrikfält & Text Area) */}
+      <div className="p-2.5 flex-1 flex flex-col gap-2 min-h-0 relative" onMouseDown={(e) => e.stopPropagation()}>
+        {/* Dedikerat Rubrikfält för att namnge anteckningen */}
+        <div
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all shrink-0 ${
+            isYellow
+              ? 'bg-amber-400/40 border-amber-600/30 focus-within:border-amber-700/60 focus-within:bg-amber-400/60'
+              : 'bg-black/25 border-white/15 focus-within:border-cyan-400/50 focus-within:bg-black/40'
+          }`}
+          title="Rubrikfält – Namnge anteckningen här"
+        >
+          <Type className="w-3.5 h-3.5 opacity-60 shrink-0" />
+          <input
+            ref={titleInputRef}
+            type="text"
+            value={titleInput}
+            onChange={handleTitleChange}
+            placeholder="Rubrik (namnge anteckning)..."
+            className={`w-full bg-transparent outline-none font-bold text-xs tracking-tight ${theme.titleColor} placeholder:opacity-50`}
+          />
+          {titleInput ? (
+            <button
+              type="button"
+              onClick={() => {
+                setTitleInput('');
+                onUpdate({
+                  ...note,
+                  title: '',
+                  updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                });
+                titleInputRef.current?.focus();
+              }}
+              title="Rensa rubrik"
+              className="opacity-40 hover:opacity-100 transition p-0.5 rounded cursor-pointer shrink-0"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          ) : null}
+        </div>
+
+        {/* Text Area */}
         <textarea
           value={textInput}
           onChange={handleTextChange}

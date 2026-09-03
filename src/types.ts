@@ -241,7 +241,7 @@ export type StickyNoteColor =
 
 export interface StickyNote {
   id: string;
-  title?: string;
+  title: string;
   text: string;
   x: number;
   y: number;
