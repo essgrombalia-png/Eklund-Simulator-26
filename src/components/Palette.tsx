@@ -79,6 +79,22 @@ const PALETTE_ITEMS: PaletteItem[] = [
     badge: 'L4/L7',
     specs: 'Round-robin, Failover',
   },
+  {
+    type: 'sdwan_edge',
+    label: 'SD-WAN Cloud Edge Gateway',
+    category: 'Gateway & Rutt',
+    description: 'Dynamisk multi-WAN ruttering, MPLS, 5G & fiber-bonding',
+    badge: 'SD-WAN',
+    specs: 'Real-Time SLA Path Steering',
+  },
+  {
+    type: 'satellite_ground',
+    label: 'LEO Satellitlänk Gateway',
+    category: 'Gateway & Rutt',
+    description: 'Fasstyrd markstationsparabol för Starlink/LEO-nät',
+    badge: 'SAT-WAN',
+    specs: 'Ka/Ku-band Orbital Uplink',
+  },
 
   // Säkerhet & Brandvägg
   {
@@ -136,6 +152,22 @@ const PALETTE_ITEMS: PaletteItem[] = [
     description: 'FIPS 140-3 hårdvarukryptering & TLS Key Vault',
     badge: 'HSM',
     specs: 'Tamper-Proof Cryptographic Enclave',
+  },
+  {
+    type: 'quantum_qkd',
+    label: 'Kvantkryptering QKD Node',
+    category: 'Säkerhet & Brandvägg',
+    description: 'Quantum Key Distribution med fotonisk sammanflätning',
+    badge: 'QKD',
+    specs: 'BB84 / E91 Post-Quantum Shield',
+  },
+  {
+    type: 'casb_proxy',
+    label: 'CASB / SASE Zero-Trust Broker',
+    category: 'Säkerhet & Brandvägg',
+    description: 'Molnsäkerhet, Zero-Trust Access & DLP Data Loss Protection',
+    badge: 'SASE',
+    specs: 'ZTNA, DLP, Cloud Policy Engine',
   },
   {
     type: 'server_vpn',
@@ -212,6 +244,14 @@ const PALETTE_ITEMS: PaletteItem[] = [
     description: 'Network Attached Storage (NFS/SMB)',
     badge: 'NAS',
     specs: 'RAID 10, iSCSI, ZFS',
+  },
+  {
+    type: 'ai_cluster',
+    label: 'AI GPU Inference Kluster',
+    category: 'Servrar & Lagring',
+    description: '8x SXM H100 Tensor GPU-kluster med NVLink bus',
+    badge: 'AI-GPU',
+    specs: '3.2 Tbps NVLink Fabric, PyTorch/vLLM',
   },
 
   // Klienter & Arbetsstationer
@@ -302,8 +342,16 @@ const PALETTE_ITEMS: PaletteItem[] = [
     label: 'Industriell PLC / SCADA',
     category: 'The Internet of Things (IoT)',
     description: 'Siemens S7 & Modbus TCP industriell styrenhet',
-    badge: 'SCADA',
+    badge: 'PLC',
     specs: 'Modbus TCP / Profinet OT',
+  },
+  {
+    type: 'scada_rtu',
+    label: 'SCADA RTU Substation Relä',
+    category: 'The Internet of Things (IoT)',
+    description: 'Högspänningsrelä, transformatormätning & IEC 61850 GOOSE',
+    badge: 'RTU',
+    specs: 'IEC-61850 / DNP3 / Modbus RTU',
   },
   {
     type: 'iot_gateway',
@@ -414,18 +462,18 @@ export const CATEGORY_THEMES: Record<
   'Gateway & Rutt': {
     name: 'Gateway & Rutt',
     shortName: 'Gateway',
-    dotColor: 'bg-sky-400',
-    textColor: 'text-sky-400',
-    textHover: 'group-hover:text-sky-300',
-    chipActive: 'bg-sky-500 text-slate-950 font-bold shadow-md shadow-sky-500/30',
-    chipInactive: 'bg-sky-950/40 text-sky-300 hover:text-white border-sky-800/60 hover:border-sky-500/50',
-    iconBg: 'bg-sky-950/60',
-    iconBorder: 'border-sky-800/60 group-hover:border-sky-400',
-    cardBorder: 'border-slate-800/90',
-    cardHoverBorder: 'hover:border-sky-500/70',
-    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(14,165,233,0.15)]',
-    badgeStyle: 'bg-sky-500/15 text-sky-300 border-sky-500/40',
-    specColor: 'text-sky-400/90',
+    dotColor: 'bg-amber-400',
+    textColor: 'text-amber-400',
+    textHover: 'group-hover:text-amber-300',
+    chipActive: 'bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/30',
+    chipInactive: 'bg-amber-950/40 text-amber-300 hover:text-white border-amber-800/60 hover:border-amber-500/50',
+    iconBg: 'bg-amber-950/60',
+    iconBorder: 'border-amber-800/60 group-hover:border-amber-400',
+    cardBorder: 'border-[#2c2219]',
+    cardHoverBorder: 'hover:border-amber-500/70',
+    cardHoverGlow: 'hover:shadow-[0_0_12px_rgba(245,158,11,0.15)]',
+    badgeStyle: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
+    specColor: 'text-amber-400/90',
   },
   'Säkerhet & Brandvägg': {
     name: 'Säkerhet & Brandvägg',
@@ -568,23 +616,23 @@ export const Palette: React.FC<PaletteProps> = ({
   }, [searchQuery, selectedCategory]);
 
   return (
-    <aside className="w-full bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-hidden select-none shadow-xl z-10">
+    <aside className="w-full bg-[#14110e] border-r border-[#2c2219] flex flex-col h-full overflow-hidden select-none shadow-xl z-10">
       {/* Header & Tab Switcher */}
-      <div className="p-3 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md space-y-2.5">
+      <div className="p-3 border-b border-[#2c2219] bg-[#0e0c0a]/90 backdrop-blur-md space-y-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-300 font-sans flex items-center gap-1.5">
-            <Cpu className="w-4 h-4 text-cyan-400" />
+          <h2 className="text-xs font-extrabold uppercase tracking-widest text-stone-300 font-sans flex items-center gap-1.5">
+            <Cpu className="w-4 h-4 text-amber-400" />
             <span>Nätverksverktyg</span>
           </h2>
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-orbitron font-extrabold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/30 tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+            <span className="text-[10px] font-orbitron font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 tracking-wider shadow-[0_0_10px_rgba(245,158,11,0.15)]">
               E26
             </span>
             {onToggleCollapse && (
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+                className="p-1 rounded hover:bg-[#241c14] text-stone-400 hover:text-amber-300 transition cursor-pointer"
                 title="Göm enhetspalett"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -594,14 +642,14 @@ export const Palette: React.FC<PaletteProps> = ({
         </div>
 
         {/* Tab Buttons */}
-        <div className="grid grid-cols-2 p-0.5 bg-slate-900 rounded-lg border border-slate-800">
+        <div className="grid grid-cols-2 p-0.5 bg-[#100d0a] rounded-lg border border-[#2c2219]">
           <button
             type="button"
             onClick={() => setActiveTab('devices')}
-            className={`py-1.5 px-2 rounded-md text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
+            className={`py-1.5 px-2 rounded-md text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
               activeTab === 'devices'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'text-stone-400 hover:text-stone-200'
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
@@ -610,10 +658,10 @@ export const Palette: React.FC<PaletteProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('cables')}
-            className={`py-1.5 px-2 rounded-md text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
+            className={`py-1.5 px-2 rounded-md text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
               activeTab === 'cables'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'text-stone-400 hover:text-stone-200'
             }`}
           >
             <Cable className="w-3.5 h-3.5" />
@@ -621,8 +669,8 @@ export const Palette: React.FC<PaletteProps> = ({
             <span
               className="w-2 h-2 rounded-full"
               style={{
-                backgroundColor: CABLE_DEFINITIONS[activeCableType]?.color || '#38bdf8',
-                boxShadow: `0 0 6px ${CABLE_DEFINITIONS[activeCableType]?.color || '#38bdf8'}`,
+                backgroundColor: CABLE_DEFINITIONS[activeCableType]?.color || '#f59e0b',
+                boxShadow: `0 0 6px ${CABLE_DEFINITIONS[activeCableType]?.color || '#f59e0b'}`,
               }}
             />
           </button>
@@ -630,8 +678,8 @@ export const Palette: React.FC<PaletteProps> = ({
 
         {/* Post-it Quick Creator Widget */}
         {onAddStickyNote && (
-          <div className="pt-2 border-t border-slate-800/80">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 mb-1.5">
+          <div className="pt-2 border-t border-[#2c2219]">
+            <div className="flex items-center justify-between text-[11px] font-bold text-stone-300 mb-1.5">
               <div className="flex items-center gap-1.5 text-amber-300">
                 <StickyNoteIcon className="w-3.5 h-3.5 text-amber-400" />
                 <span>Nätverksdokumentation</span>
@@ -669,19 +717,19 @@ export const Palette: React.FC<PaletteProps> = ({
         {activeTab === 'devices' && (
           <div className="space-y-1.5 pt-1">
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Sök enhet, protokoll, port..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 transition"
+                className="w-full bg-[#100d0a] border border-[#2c2219] rounded-lg pl-8 pr-3 py-1.5 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/30 transition"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 hover:text-slate-300"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-stone-500 hover:text-stone-300"
                 >
                   ✕
                 </button>
@@ -695,8 +743,8 @@ export const Palette: React.FC<PaletteProps> = ({
                 onClick={() => setSelectedCategory('all')}
                 className={`px-2 py-0.5 rounded-md font-semibold whitespace-nowrap transition cursor-pointer ${
                   selectedCategory === 'all'
-                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
-                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    ? 'bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20'
+                    : 'bg-[#100d0a] text-stone-400 hover:text-stone-200 border border-[#2c2219]'
                 }`}
               >
                 Alla ({PALETTE_ITEMS.length})
@@ -711,8 +759,8 @@ export const Palette: React.FC<PaletteProps> = ({
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-2 py-0.5 rounded-md font-semibold whitespace-nowrap transition cursor-pointer border ${
                       isSelected
-                        ? theme?.chipActive || 'bg-cyan-500 text-slate-950 font-bold'
-                        : theme?.chipInactive || 'bg-slate-950 text-slate-400 hover:text-slate-200 border-slate-800'
+                        ? theme?.chipActive || 'bg-amber-500 text-stone-950 font-bold'
+                        : theme?.chipInactive || 'bg-[#100d0a] text-stone-400 hover:text-stone-200 border-[#2c2219]'
                     }`}
                   >
                     {theme?.shortName || cat.split(' ')[0]}
@@ -764,24 +812,24 @@ export const Palette: React.FC<PaletteProps> = ({
                             e.dataTransfer.effectAllowed = 'copy';
                           }}
                           onClick={() => onAddDevice(item.type)}
-                          className={`group relative flex items-center gap-2.5 p-2 rounded-xl border bg-slate-950/90 hover:bg-slate-900 cursor-grab active:cursor-grabbing transition-all duration-150 shadow-sm ${
-                            catTheme?.cardBorder || 'border-slate-800/90'
-                          } ${catTheme?.cardHoverBorder || 'hover:border-cyan-500/60'} ${
-                            catTheme?.cardHoverGlow || 'hover:shadow-cyan-500/10'
+                          className={`group relative flex items-center gap-2.5 p-2 rounded-xl border bg-[#100d0a] hover:bg-[#19140f] cursor-grab active:cursor-grabbing transition-all duration-150 shadow-sm ${
+                            catTheme?.cardBorder || 'border-[#2c2219]'
+                          } ${catTheme?.cardHoverBorder || 'hover:border-amber-500/60'} ${
+                            catTheme?.cardHoverGlow || 'hover:shadow-amber-500/10'
                           }`}
                         >
                           <div
                             className={`p-1.5 rounded-lg border group-hover:scale-105 transition-all shrink-0 ${
-                              catTheme?.iconBg || 'bg-slate-900/90'
-                            } ${catTheme?.iconBorder || 'border-slate-800'}`}
+                              catTheme?.iconBg || 'bg-[#16120e]'
+                            } ${catTheme?.iconBorder || 'border-[#2c2219]'}`}
                           >
                             <RealisticDeviceIcon type={item.type} size="sm" />
                           </div>
                           <div className="flex-1 min-w-0 pr-1">
                             <div className="flex items-center justify-between gap-1">
                               <span
-                                className={`text-xs font-bold text-slate-200 transition-colors ${
-                                  catTheme?.textHover || 'group-hover:text-cyan-300'
+                                className={`text-xs font-bold text-stone-200 transition-colors ${
+                                  catTheme?.textHover || 'group-hover:text-amber-300'
                                 } truncate font-sans`}
                               >
                                 {item.label}
@@ -789,20 +837,20 @@ export const Palette: React.FC<PaletteProps> = ({
                               {item.badge && (
                                 <span
                                   className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
-                                    catTheme?.badgeStyle || 'bg-slate-800 text-slate-400 border-slate-700/60'
+                                    catTheme?.badgeStyle || 'bg-[#1b1510] text-stone-400 border-[#32261b]'
                                   }`}
                                 >
                                   {item.badge}
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                            <div className="text-[10px] text-stone-400 truncate mt-0.5">
                               {item.description}
                             </div>
                             {item.specs && (
                               <div
                                 className={`text-[9px] font-mono truncate mt-0.5 flex items-center gap-1 ${
-                                  catTheme?.specColor || 'text-cyan-400/80'
+                                  catTheme?.specColor || 'text-amber-400/80'
                                 }`}
                               >
                                 <span>&bull;</span>
@@ -821,7 +869,7 @@ export const Palette: React.FC<PaletteProps> = ({
       ) : (
         /* Cables Tab */
         <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-          <div className="text-[10.5px] text-slate-400 px-1 leading-relaxed">
+          <div className="text-[10.5px] text-stone-400 px-1 leading-relaxed">
             Klicka på en specialkabel för att aktivera den. Dra sedan mellan enheter på canvasen.
           </div>
 
@@ -836,8 +884,8 @@ export const Palette: React.FC<PaletteProps> = ({
                   onClick={() => onSelectCableType?.(key)}
                   className={`relative p-2.5 rounded-xl border transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-slate-800/95 border-cyan-500 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
-                      : 'bg-slate-950 hover:bg-slate-900 border-slate-800 hover:border-slate-700'
+                      ? 'bg-[#221a13] border-amber-500 ring-2 ring-amber-500/30 shadow-lg shadow-amber-500/15'
+                      : 'bg-[#100d0a] hover:bg-[#18140f] border-[#2c2219] hover:border-[#3d2e20]'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -851,7 +899,7 @@ export const Palette: React.FC<PaletteProps> = ({
                       />
                       <span
                         className={`text-xs font-bold truncate font-sans ${
-                          isActive ? 'text-cyan-300' : 'text-slate-200'
+                          isActive ? 'text-amber-300' : 'text-stone-200'
                         }`}
                       >
                         {def.name}
@@ -870,22 +918,22 @@ export const Palette: React.FC<PaletteProps> = ({
                     </span>
                   </div>
 
-                  <div className="mt-1.5 text-[10px] text-slate-300 font-medium leading-snug">
+                  <div className="mt-1.5 text-[10px] text-stone-300 font-medium leading-snug">
                     {def.subtitle}
                   </div>
 
-                  <div className="mt-1 text-[9.5px] text-slate-400/90 leading-tight">
-                    <span className="text-cyan-400 font-semibold">Används för: </span>
+                  <div className="mt-1 text-[9.5px] text-stone-400/90 leading-tight">
+                    <span className="text-amber-400 font-semibold">Används för: </span>
                     {def.specializedFor}
                   </div>
 
                   {isActive && (
-                    <div className="mt-2 pt-1.5 border-t border-cyan-500/30 flex items-center justify-between text-[10px] text-cyan-300 font-semibold">
+                    <div className="mt-2 pt-1.5 border-t border-amber-500/30 flex items-center justify-between text-[10px] text-amber-300 font-semibold">
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
                         <span>Aktiv kabel</span>
                       </div>
-                      <span className="font-mono text-[9px] text-slate-400">
+                      <span className="font-mono text-[9px] text-stone-400">
                         {def.bandwidthMbps} Mbps &bull; {def.latencyMs}ms
                       </span>
                     </div>
@@ -898,35 +946,35 @@ export const Palette: React.FC<PaletteProps> = ({
       )}
 
       {/* Quick Active Cable Banner in Footer */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950 text-xs space-y-2">
+      <div className="p-3 border-t border-[#2c2219] bg-[#0e0c0a] text-xs space-y-2">
         <div className="flex items-center justify-between">
-          <div className="font-bold text-slate-300 text-[10px] uppercase tracking-wider flex items-center gap-1.5">
-            <Cable className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="font-bold text-stone-300 text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+            <Cable className="w-3.5 h-3.5 text-amber-400" />
             <span>Vald kabel</span>
           </div>
           <button
             type="button"
             onClick={() => setActiveTab('cables')}
-            className="text-[10px] text-cyan-400 hover:underline font-semibold"
+            className="text-[10px] text-amber-400 hover:underline font-semibold cursor-pointer"
           >
             Byt typ
           </button>
         </div>
 
-        <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+        <div className="p-2 rounded-lg bg-[#14110e] border border-[#2c2219] flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{
-                backgroundColor: CABLE_DEFINITIONS[activeCableType]?.color || '#38bdf8',
-                boxShadow: `0 0 6px ${CABLE_DEFINITIONS[activeCableType]?.color || '#38bdf8'}`,
+                backgroundColor: CABLE_DEFINITIONS[activeCableType]?.color || '#f59e0b',
+                boxShadow: `0 0 6px ${CABLE_DEFINITIONS[activeCableType]?.color || '#f59e0b'}`,
               }}
             />
-            <span className="text-[11px] font-bold text-slate-200 truncate">
+            <span className="text-[11px] font-bold text-stone-200 truncate">
               {CABLE_DEFINITIONS[activeCableType]?.shortName || 'Auto-kabel'}
             </span>
           </div>
-          <span className="text-[9px] font-mono text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800">
+          <span className="text-[9px] font-mono text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800">
             {CABLE_DEFINITIONS[activeCableType]?.badge || 'AUTO'}
           </span>
         </div>

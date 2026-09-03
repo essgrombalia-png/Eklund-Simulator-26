@@ -203,19 +203,19 @@ export const Inspector: React.FC<InspectorProps> = ({
     <aside
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
-      className="w-full max-w-sm sm:w-80 bg-slate-900 border-l border-slate-800 flex flex-col h-full overflow-hidden shrink-0 shadow-2xl z-40 absolute right-0 top-0 lg:static h-full animate-slide-left select-text"
+      className="w-full max-w-sm sm:w-80 bg-[#14110e] border-l border-[#2c2219] flex flex-col h-full overflow-hidden shrink-0 shadow-2xl z-40 absolute right-0 top-0 lg:static animate-slide-left select-text"
     >
       {/* Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+      <div className="p-4 border-b border-[#2c2219] flex items-center justify-between bg-[#0e0c0a]/90 backdrop-blur-md">
         <div className="flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-cyan-400" />
-          <h2 className="text-sm font-bold text-slate-100 font-sans uppercase tracking-wider">
+          <Sliders className="w-4 h-4 text-amber-400" />
+          <h2 className="text-sm font-bold text-stone-100 font-sans uppercase tracking-wider">
             {selectedNode ? 'Enhetskonfiguration' : 'Kabelkonfiguration'}
           </h2>
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition"
+          className="p-1 rounded-lg hover:bg-[#241c14] text-stone-400 hover:text-stone-200 transition cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
@@ -228,13 +228,13 @@ export const Inspector: React.FC<InspectorProps> = ({
           return (
             <>
               {/* Device Visual Title Card */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 shrink-0">
+              <div className="bg-[#0e0c0a] p-3 rounded-xl border border-[#2c2219] flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[#18130e] border border-[#2c2219] shrink-0">
                   <RealisticDeviceIcon type={selectedNode.type} size="md" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-slate-100 text-sm truncate">{selectedNode.name}</div>
-                  <div className="text-[10px] text-cyan-400 font-mono tracking-tight uppercase">
+                  <div className="font-bold text-stone-100 text-sm truncate">{selectedNode.name}</div>
+                  <div className="text-[10px] text-amber-400 font-mono tracking-tight uppercase">
                     {selectedNode.type} &bull; {selectedNode.ip || 'Ingen IP'}
                   </div>
                 </div>

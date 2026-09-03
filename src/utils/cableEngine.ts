@@ -31,8 +31,8 @@ export const CABLE_DEFINITIONS: Record<CableType, CableDefinition> = {
     bandwidthMbps: 1000,
     latencyMs: 1,
     duplex: 'full',
-    color: '#38bdf8',
-    accentColor: '#0284c7',
+    color: '#f59e0b',
+    accentColor: '#d97706',
     dashArray: 'none',
     strokeWidth: 2.5,
     badge: 'AUTO',
@@ -49,8 +49,8 @@ export const CABLE_DEFINITIONS: Record<CableType, CableDefinition> = {
     bandwidthMbps: 1000,
     latencyMs: 1,
     duplex: 'full',
-    color: '#06b6d4', // Cyan
-    accentColor: '#0891b2',
+    color: '#eab308', // Vintage Golden Brass
+    accentColor: '#ca8a04',
     dashArray: 'none',
     strokeWidth: 2.5,
     badge: '1 Gbps',

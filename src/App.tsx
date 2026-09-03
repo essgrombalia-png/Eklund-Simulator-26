@@ -184,13 +184,13 @@ export default function App() {
   const handleAddStickyNote = (x?: number, y?: number, text?: string, color?: StickyNoteColor) => {
     const newNote: StickyNote = {
       id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      title: 'Dokumentation',
-      text: text || 'Klicka för att skriva nätverksdokumentation, IP-planering eller anteckningar...',
+      title: 'Anteckning',
+      text: text ?? '',
       x: x ?? 320,
       y: y ?? 220,
       color: color || 'yellow',
-      width: 220,
-      height: 160,
+      width: 240,
+      height: 180,
       updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     updateTopology({ stickyNotes: (prev) => [...prev, newNote] }, 'Lade till digital Post-it');
@@ -894,6 +894,12 @@ export default function App() {
       hacker_c2: `C2 Server ${count}`,
       hacker_implant: `Rogue Implant TAP ${count}`,
       hacker_stager: `Exploit Stager ${count}`,
+      quantum_qkd: `Kvantkryptering QKD ${count}`,
+      ai_cluster: `AI Superdator ${count}`,
+      sdwan_edge: `SD-WAN Gateway ${count}`,
+      scada_rtu: `SCADA RTU Relä ${count}`,
+      satellite_ground: `Satellitlänk Parabol ${count}`,
+      casb_proxy: `CASB Zero-Trust Proxy ${count}`,
     };
 
     const isHacker = isHackerDevice(type);
@@ -1145,7 +1151,7 @@ export default function App() {
   // Node position drag
   const handleUpdateNodePosition = (id: string, x: number, y: number) => {
     const nextNodes = nodes.map((n) => (n.id === id ? { ...n, x, y } : n));
-    setPresentDirectly({ nodes: nextNodes, links, containers });
+    setPresentDirectly({ nodes: nextNodes, links, containers, stickyNotes });
   };
 
   // Multiple node positions drag
@@ -1158,7 +1164,7 @@ export default function App() {
       }
       return n;
     });
-    setPresentDirectly({ nodes: nextNodes, links, containers });
+    setPresentDirectly({ nodes: nextNodes, links, containers, stickyNotes });
   };
 
   // Container handlers
@@ -1426,27 +1432,36 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Palette */}
         {activeTab === 'canvas' && (
-          <div className={`transition-all duration-300 ease-in-out flex shrink-0 ${
-            isPaletteCollapsed 
-              ? 'w-0 -translate-x-full absolute lg:relative z-40' 
-              : 'w-72 translate-x-0 absolute lg:static z-40 h-full'
-          }`}>
-            <Palette
-              onAddDevice={handleAddDevice}
-              onAddStickyNote={handleAddStickyNote}
-              activeCableType={activeCableType}
-              onSelectCableType={setActiveCableType}
-              isCollapsed={isPaletteCollapsed}
-              onToggleCollapse={() => setIsPaletteCollapsed((prev) => !prev)}
-            />
-          </div>
+          <>
+            {/* Backdrop for iPad/mobile when palette is open */}
+            {!isPaletteCollapsed && (
+              <div
+                className="fixed inset-0 bg-black/50 backdrop-blur-xs z-30 lg:hidden"
+                onClick={() => setIsPaletteCollapsed(true)}
+              />
+            )}
+            <div className={`transition-all duration-300 ease-in-out flex shrink-0 ${
+              isPaletteCollapsed 
+                ? 'w-0 -translate-x-full absolute lg:relative z-40' 
+                : 'w-72 translate-x-0 absolute lg:static z-40 h-full'
+            }`}>
+              <Palette
+                onAddDevice={handleAddDevice}
+                onAddStickyNote={handleAddStickyNote}
+                activeCableType={activeCableType}
+                onSelectCableType={setActiveCableType}
+                isCollapsed={isPaletteCollapsed}
+                onToggleCollapse={() => setIsPaletteCollapsed((prev) => !prev)}
+              />
+            </div>
+          </>
         )}
 
         {/* Floating Palette Trigger when Collapsed */}
         {activeTab === 'canvas' && isPaletteCollapsed && (
           <button
             onClick={() => setIsPaletteCollapsed(false)}
-            className="absolute left-3 top-3 z-30 p-2.5 rounded-xl bg-slate-900/95 backdrop-blur-md border border-slate-800 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 shadow-lg shadow-black/40 transition-all flex items-center justify-center cursor-pointer group hover:scale-105 active:scale-95"
+            className="absolute left-3 top-3 z-30 p-2.5 rounded-xl bg-[#14110e]/95 backdrop-blur-md border border-[#2c2219] text-amber-400 hover:text-amber-300 hover:bg-[#201812] shadow-lg shadow-black/40 transition-all flex items-center justify-center cursor-pointer group hover:scale-105 active:scale-95"
             title="Visa enhetspalett"
           >
             <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
@@ -1632,10 +1647,10 @@ export default function App() {
 
       {/* Bottom Connection Test & Ping Console */}
       {activeTab === 'canvas' && (
-        <footer className="bg-slate-900 border-t border-slate-800 p-3 flex flex-wrap lg:flex-nowrap items-center gap-4 z-20 shadow-2xl">
+        <footer className="bg-[#14110e] border-t border-[#2c2219] p-2.5 sm:p-3 flex flex-wrap lg:flex-nowrap items-center gap-3 lg:gap-4 z-20 shadow-2xl">
           {/* Test Controls */}
           <div className="flex items-center gap-2.5 shrink-0">
-            <span className="text-xs font-bold text-slate-300 font-sans uppercase tracking-wider hidden sm:inline">
+            <span className="text-xs font-bold text-stone-300 font-sans uppercase tracking-wider hidden sm:inline">
               Testa Ping:
             </span>
 
@@ -1645,7 +1660,7 @@ export default function App() {
                 setTestFromId(e.target.value);
                 setLastPingSuccess(null);
               }}
-              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[140px]"
+              className="bg-[#0e0c0a] border border-[#2c2219] text-stone-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500/60 max-w-[140px]"
             >
               {nodes.map((n) => (
                 <option key={n.id} value={n.id}>
@@ -1654,7 +1669,7 @@ export default function App() {
               ))}
             </select>
 
-            <ArrowRight className="w-4 h-4 text-slate-500 shrink-0" />
+            <ArrowRight className="w-4 h-4 text-stone-500 shrink-0" />
 
             <select
               value={testToId}
@@ -1662,7 +1677,7 @@ export default function App() {
                 setTestToId(e.target.value);
                 setLastPingSuccess(null);
               }}
-              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[140px]"
+              className="bg-[#0e0c0a] border border-[#2c2219] text-stone-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500/60 max-w-[140px]"
             >
               {nodes.map((n) => (
                 <option key={n.id} value={n.id}>
@@ -1674,9 +1689,9 @@ export default function App() {
             <button
               onClick={handleRunPingTest}
               disabled={isTestingPing || !testFromId || !testToId}
-              className="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition shadow-md shadow-cyan-500/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs transition shadow-md shadow-amber-500/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
             >
-              <Play className="w-3.5 h-3.5 fill-slate-950" />
+              <Play className="w-3.5 h-3.5 fill-stone-950" />
               <span>{isTestingPing ? 'Testar...' : 'Kör Ping'}</span>
             </button>
 
@@ -1686,21 +1701,21 @@ export default function App() {
                 type="button"
                 onClick={handleRepairPath}
                 title="Reparera kablar, IP-adresser, gateways och brandväggsregler längs denna väg automatiskt!"
-                className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-slate-950 font-black text-xs transition shadow-lg shadow-rose-500/30 flex items-center gap-1.5 animate-bounce cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-stone-950 font-black text-xs transition shadow-lg shadow-rose-500/30 flex items-center gap-1.5 animate-bounce cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+                <Sparkles className="w-3.5 h-3.5 fill-stone-950" />
                 <span>Fixa automatiskt</span>
               </button>
             )}
           </div>
 
           {/* Test Output Console */}
-          <div className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 font-mono text-[11px] text-cyan-300 overflow-x-auto max-h-12 flex items-center justify-between gap-3 custom-scrollbar">
+          <div className="flex-1 bg-[#0e0c0a] border border-[#2c2219] rounded-xl px-3 py-1.5 font-mono text-[11px] text-amber-300 overflow-x-auto max-h-12 flex items-center justify-between gap-3 custom-scrollbar">
             <div className="flex items-center gap-3 truncate">
-              <div className="shrink-0 text-slate-500 font-sans text-[10px] uppercase font-bold">
+              <div className="shrink-0 text-stone-500 font-sans text-[10px] uppercase font-bold">
                 LOGG
               </div>
-              <div className="truncate text-slate-200">
+              <div className="truncate text-stone-200">
                 {pingLogs[pingLogs.length - 1]}
               </div>
             </div>
@@ -1712,7 +1727,7 @@ export default function App() {
                 className={`px-2 py-0.5 rounded border text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
                   showMiniTerminal
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-500/20'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800'
+                    : 'bg-[#14110e] text-stone-400 border-[#2c2219] hover:text-stone-200 hover:bg-[#201812]'
                 }`}
               >
                 <Terminal className="w-3 h-3 text-emerald-400" />

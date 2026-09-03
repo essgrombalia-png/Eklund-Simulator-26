@@ -1,6 +1,21 @@
 import { ThemeConfig, SimulatorThemeId, AdvancedSettings, UserProfile } from '../types';
 
 export const SIMULATOR_THEMES: Record<SimulatorThemeId, ThemeConfig> = {
+  vintage_terminal: {
+    id: 'vintage_terminal',
+    name: 'Vintage Terminal (Mainframe Amber)',
+    tagline: 'Autentisk retro beräkningsestetik med bärnstensfosfor, varm grafit & vintage DEC/IBM-konsol',
+    bgCanvas: '#0e0c0a',
+    bgTopbar: '#181410',
+    bgSidebar: '#13100d',
+    accentPrimary: '#f59e0b',
+    accentSecondary: '#ea580c',
+    borderPrimary: '#2d241c',
+    gridLineColor: 'rgba(245, 158, 11, 0.09)',
+    gridDotColor: '#3e2e1e',
+    nodeGlowColor: 'rgba(245, 158, 11, 0.45)',
+    matrixTheme: 'amber_gold',
+  },
   cyber_matrix: {
     id: 'cyber_matrix',
     name: 'Cyber Matrix',
@@ -186,14 +201,14 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
 ];
 
 export const DEFAULT_ADVANCED_SETTINGS: AdvancedSettings = {
-  themeId: 'cyber_matrix',
+  themeId: 'vintage_terminal',
   canvasGridStyle: 'dots',
   gridSnap: true,
   gridSnapSize: 20,
   matrixRainEnabled: true,
-  matrixRainOpacity: 0.25,
+  matrixRainOpacity: 0.22,
   matrixRainSpeed: 1,
-  matrixRainTheme: 'classic_green',
+  matrixRainTheme: 'amber_gold',
   ambientGlowEnabled: true,
   uiFontTheme: 'cyber',
 
@@ -232,7 +247,11 @@ export function loadSavedSettings(): AdvancedSettings {
     if (raw) {
       merged = { ...merged, ...JSON.parse(raw) };
     }
-    if (systemThemeOverride && (systemThemeOverride in SIMULATOR_THEMES)) {
+    // Automatically transition users from the old default cyber_matrix to vintage_terminal
+    if (!systemThemeOverride || systemThemeOverride === 'cyber_matrix') {
+      merged.themeId = 'vintage_terminal';
+      merged.matrixRainTheme = 'amber_gold';
+    } else if (systemThemeOverride in SIMULATOR_THEMES) {
       merged.themeId = systemThemeOverride as SimulatorThemeId;
     }
     return merged;

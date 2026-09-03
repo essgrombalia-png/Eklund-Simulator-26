@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Device, Link, CapturedPacket } from '../types';
 import { maskToCidr } from '../utils/networkEngine';
+import { RealisticDeviceIcon } from './RealisticDeviceIcon';
 
 interface NodeTooltipProps {
   node: Device;
@@ -218,18 +219,23 @@ export const NodeTooltip: React.FC<NodeTooltipProps> = ({
       <div className="bg-slate-950/95 border border-cyan-500/60 shadow-[0_0_30px_rgba(6,182,212,0.4)] rounded-2xl p-3.5 text-slate-100 text-xs backdrop-blur-xl space-y-3">
         {/* Header: Name, Device Type & Real-time Status Badge */}
         <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/90">
-          <div className="min-w-0 pr-2">
-            <div className="font-bold text-slate-100 text-xs truncate flex items-center gap-1.5">
-              <span>{node.name}</span>
-              {node.isInfected && (
-                <span className="text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/40 px-1.5 py-0.5 rounded font-mono animate-pulse">
-                  ☣️ INFEKTERAD
-                </span>
-              )}
+          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+            <div className="p-1 rounded-lg bg-slate-900 border border-slate-800 shrink-0">
+              <RealisticDeviceIcon type={node.type} size="sm" />
             </div>
-            <div className="text-[10px] text-cyan-400 font-mono tracking-wider uppercase flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping inline-block" />
-              <span>{node.type.replace(/_/g, ' ')}</span>
+            <div className="min-w-0">
+              <div className="font-bold text-slate-100 text-xs truncate flex items-center gap-1.5">
+                <span>{node.name}</span>
+                {node.isInfected && (
+                  <span className="text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/40 px-1.5 py-0.5 rounded font-mono animate-pulse">
+                    ☣️ INFEKTERAD
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-cyan-400 font-mono tracking-wider uppercase flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping inline-block" />
+                <span>{node.type.replace(/_/g, ' ')}</span>
+              </div>
             </div>
           </div>
 

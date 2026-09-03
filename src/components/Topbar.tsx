@@ -182,13 +182,13 @@ export const Topbar: React.FC<TopbarProps> = ({
   return (
     <header
       id="main-app-header"
-      className="h-14 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800/80 text-slate-200 px-3 lg:px-4 flex items-center justify-between gap-2 lg:gap-3 shadow-xl z-30 select-none relative transition-all duration-200 shrink-0"
+      className="h-14 bg-[#14110e]/95 backdrop-blur-xl border-b border-[#2c2219] text-stone-200 px-2.5 sm:px-3 lg:px-4 flex items-center justify-between gap-2 lg:gap-3 shadow-xl z-30 select-none relative transition-all duration-200 shrink-0"
     >
       {/* ─── ZONE 1: LEFT (Brand, Scenarios & Architecture) ─── */}
-      <div className="flex items-center gap-2.5 lg:gap-3 shrink-0">
+      <div className="flex items-center gap-2 lg:gap-3 shrink-0">
         <EklundLogo size="sm" showSubtitle={false} />
 
-        <div className="h-5 w-px bg-slate-800/80 hidden sm:block" />
+        <div className="h-5 w-px bg-[#2c2219] hidden sm:block" />
 
         {/* Architecture & Scenario Hub */}
         <div className="flex items-center gap-1.5">
@@ -222,7 +222,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 }
               }}
               title="Välj fördefinierad nätverksarkitektur"
-              className="bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs rounded-lg pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/60 transition cursor-pointer font-medium appearance-none max-w-[130px] lg:max-w-[160px] truncate shadow-xs"
+              className="bg-[#100d0a] hover:bg-[#18130e] border border-[#2c2219] hover:border-[#3d2e20] text-stone-300 hover:text-white text-xs rounded-lg pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500/60 transition cursor-pointer font-medium appearance-none max-w-[130px] lg:max-w-[160px] truncate shadow-xs"
             >
               <option value="custom">✨ Tom arbetsyta</option>
               <optgroup label="Färdiga Arkitekturer">
@@ -233,32 +233,32 @@ export const Topbar: React.FC<TopbarProps> = ({
                 ))}
               </optgroup>
             </select>
-            <ChevronDown className="w-3 h-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-3 h-3 text-stone-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
         {/* Live Network Telemetry Pill */}
-        <div className="hidden 2xl:flex items-center gap-2 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800/80 text-[11px] font-mono text-slate-300 shadow-inner">
+        <div className="hidden 2xl:flex items-center gap-2 bg-[#100d0a]/80 px-2.5 py-1 rounded-lg border border-[#2c2219] text-[11px] font-mono text-stone-300 shadow-inner">
           <span className="flex items-center gap-1.5 font-semibold">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
             </span>
-            <span className="text-cyan-300 font-bold">{nodeCount}</span> noder
+            <span className="text-amber-300 font-bold">{nodeCount}</span> noder
           </span>
-          <span className="text-slate-700">·</span>
-          <span className="text-slate-400">
-            <span className="text-slate-200 font-bold">{linkCount}</span> länkar
+          <span className="text-stone-700">·</span>
+          <span className="text-stone-400">
+            <span className="text-stone-200 font-bold">{linkCount}</span> länkar
           </span>
-          <span className="text-slate-700">·</span>
+          <span className="text-stone-700">·</span>
           <span className="flex items-center gap-1 text-emerald-400 font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             {onlineCount} online
           </span>
           {lastAutoSavedTime && (
             <>
-              <span className="text-slate-700">·</span>
-              <span className="text-[10px] text-slate-500 font-sans truncate max-w-[100px]" title="Automatisk lokal synk">
+              <span className="text-stone-700">·</span>
+              <span className="text-[10px] text-stone-500 font-sans truncate max-w-[100px]" title="Automatisk lokal synk">
                 {lastAutoSavedTime}
               </span>
             </>
@@ -270,7 +270,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       <div className="flex items-center justify-center shrink-0">
         <nav
           id="topbar-views-nav"
-          className="flex items-center bg-slate-900/90 p-0.5 sm:p-1 rounded-xl border border-slate-800/90 shadow-inner gap-0.5"
+          className="flex items-center bg-[#100d0a] p-0.5 sm:p-1 rounded-xl border border-[#2c2219] shadow-inner gap-0.5"
           aria-label="Applikationsvyer"
         >
           <button
@@ -280,11 +280,11 @@ export const Topbar: React.FC<TopbarProps> = ({
             title="Topologisk 2D/3D Nätverkskarta"
             className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'canvas'
-                ? 'bg-sky-500 text-slate-950 font-bold shadow-md shadow-sky-500/25'
-                : 'text-slate-400 hover:text-sky-300 hover:bg-sky-500/10'
+                ? 'bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/25'
+                : 'text-stone-400 hover:text-amber-300 hover:bg-amber-500/10'
             }`}
           >
-            <Globe className="w-3.5 h-3.5 text-sky-400" />
+            <Globe className="w-3.5 h-3.5 text-amber-400" />
             <span className="hidden sm:inline">Topologi</span>
           </button>
 
@@ -298,8 +298,8 @@ export const Topbar: React.FC<TopbarProps> = ({
             title="Cisco IOS & Linux Terminal CLI"
             className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'terminal'
-                ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/25'
-                : 'text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                ? 'bg-emerald-600 text-stone-950 font-bold shadow-md shadow-emerald-600/25'
+                : 'text-stone-400 hover:text-emerald-300 hover:bg-emerald-500/10'
             }`}
           >
             <Terminal className="w-3.5 h-3.5 text-emerald-400" />
@@ -315,12 +315,12 @@ export const Topbar: React.FC<TopbarProps> = ({
               className={`hidden xl:flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 showMiniTerminal
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-xs'
-                  : 'text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent'
+                  : 'text-stone-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent'
               }`}
             >
               <Terminal className="w-3 h-3 text-emerald-400" />
               <span>Mini</span>
-              <span className={`w-1.5 h-1.5 rounded-full ${showMiniTerminal ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${showMiniTerminal ? 'bg-emerald-400 animate-pulse' : 'bg-stone-600'}`} />
             </button>
           )}
 
@@ -334,11 +334,11 @@ export const Topbar: React.FC<TopbarProps> = ({
             title="Wireshark-stil Nätverkspaketinspektör"
             className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'packets'
-                ? 'bg-blue-500 text-white font-bold shadow-md shadow-blue-500/25'
-                : 'text-slate-400 hover:text-blue-300 hover:bg-blue-500/10'
+                ? 'bg-amber-600 text-stone-950 font-bold shadow-md shadow-amber-600/25'
+                : 'text-stone-400 hover:text-amber-300 hover:bg-amber-500/10'
             }`}
           >
-            <Radio className="w-3.5 h-3.5 text-blue-400" />
+            <Radio className="w-3.5 h-3.5 text-amber-400" />
             <span className="hidden sm:inline">Paket</span>
           </button>
 
@@ -352,11 +352,11 @@ export const Topbar: React.FC<TopbarProps> = ({
             title="Trafikgenerator, DDoS & Cyberbelastning"
             className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'traffic'
-                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/25'
-                : 'text-slate-400 hover:text-amber-300 hover:bg-amber-500/10'
+                ? 'bg-orange-500 text-stone-950 font-bold shadow-md shadow-orange-500/25'
+                : 'text-stone-400 hover:text-orange-300 hover:bg-orange-500/10'
             }`}
           >
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <Zap className="w-3.5 h-3.5 text-orange-400" />
             <span className="hidden md:inline">Trafik</span>
           </button>
 
@@ -367,11 +367,11 @@ export const Topbar: React.FC<TopbarProps> = ({
             title="Realtidstelemetri & Nätverksprestanda"
             className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'stats'
-                ? 'bg-purple-500 text-white font-bold shadow-md shadow-purple-500/25'
-                : 'text-slate-400 hover:text-purple-300 hover:bg-purple-500/10'
+                ? 'bg-amber-700 text-stone-100 font-bold shadow-md shadow-amber-700/25'
+                : 'text-stone-400 hover:text-amber-300 hover:bg-amber-500/10'
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
+            <BarChart3 className="w-3.5 h-3.5 text-amber-400" />
             <span className="hidden lg:inline">Statistik</span>
           </button>
         </nav>
@@ -392,9 +392,9 @@ export const Topbar: React.FC<TopbarProps> = ({
               }}
               onFocus={() => setSearchDropdownOpen(true)}
               placeholder="Sök nod..."
-              className="bg-slate-900/90 hover:bg-slate-850 border border-slate-800 focus:border-cyan-500/80 rounded-lg text-xs pl-8 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all duration-200 w-28 lg:w-40 xl:w-48 focus:w-56 text-slate-200 placeholder-slate-500 shadow-inner"
+              className="bg-[#100d0a] hover:bg-[#18130e] border border-[#2c2219] focus:border-amber-500/80 rounded-lg text-xs pl-8 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500/40 transition-all duration-200 w-28 lg:w-40 xl:w-48 focus:w-56 text-stone-200 placeholder-stone-500 shadow-inner"
             />
-            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-stone-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             {searchQuery && (
               <button
                 type="button"
@@ -402,7 +402,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                   setSearchQuery('');
                   setSearchDropdownOpen(false);
                 }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-[#241c14] text-stone-400 hover:text-white cursor-pointer transition"
                 title="Rensa sökning"
               >
                 <X className="w-3 h-3" />
@@ -412,10 +412,10 @@ export const Topbar: React.FC<TopbarProps> = ({
 
           {/* Search Dropdown Panel */}
           {searchDropdownOpen && searchQuery.trim() !== '' && (
-            <div className="absolute right-0 mt-1.5 w-72 max-h-64 overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-slate-800">
-              <div className="px-2 py-1 border-b border-slate-800/60 mb-1 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="absolute right-0 mt-1.5 w-72 max-h-64 overflow-y-auto bg-[#14110e]/98 backdrop-blur-xl border border-[#2c2219] rounded-xl shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 custom-scrollbar">
+              <div className="px-2 py-1 border-b border-[#2c2219] mb-1 flex items-center justify-between text-[10px] font-bold text-stone-500 uppercase tracking-wider">
                 <span>Sökresultat</span>
-                <span className="font-mono text-cyan-400/80">{filteredNodes.length} funna</span>
+                <span className="font-mono text-amber-400/80">{filteredNodes.length} funna</span>
               </div>
 
               {filteredNodes.length === 0 ? (
@@ -793,10 +793,10 @@ export const Topbar: React.FC<TopbarProps> = ({
           </div>
         </div>
 
-        <div className="h-5 w-px bg-slate-800/80" />
+        <div className="h-5 w-px bg-[#2c2219]" />
 
         {/* History: Undo / Redo */}
-        <div className="flex items-center bg-slate-900/90 rounded-lg border border-slate-800 p-0.5 shadow-inner">
+        <div className="flex items-center bg-[#100d0a] rounded-lg border border-[#2c2219] p-0.5 shadow-inner">
           <button
             id="topbar-undo-btn"
             type="button"
@@ -805,8 +805,8 @@ export const Topbar: React.FC<TopbarProps> = ({
             title="Ångra ändring (Ctrl+Z)"
             className={`p-1.5 rounded-md transition ${
               canUndo
-                ? 'text-slate-300 hover:text-cyan-300 hover:bg-slate-800 cursor-pointer'
-                : 'text-slate-600 cursor-not-allowed opacity-40'
+                ? 'text-stone-300 hover:text-amber-300 hover:bg-[#201a14] cursor-pointer'
+                : 'text-stone-600 cursor-not-allowed opacity-40'
             }`}
           >
             <Undo2 className="w-3.5 h-3.5" />
@@ -819,8 +819,8 @@ export const Topbar: React.FC<TopbarProps> = ({
             title="Gör om ändring (Ctrl+Y / Cmd+Shift+Z)"
             className={`p-1.5 rounded-md transition ${
               canRedo
-                ? 'text-slate-300 hover:text-cyan-300 hover:bg-slate-800 cursor-pointer'
-                : 'text-slate-600 cursor-not-allowed opacity-40'
+                ? 'text-stone-300 hover:text-amber-300 hover:bg-[#201a14] cursor-pointer'
+                : 'text-stone-600 cursor-not-allowed opacity-40'
             }`}
           >
             <Redo2 className="w-3.5 h-3.5" />
@@ -839,20 +839,20 @@ export const Topbar: React.FC<TopbarProps> = ({
               setUserMenuOpen(false);
             }}
             title="Återställ eller rensa arbetsyta"
-            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition cursor-pointer active:scale-95"
+            className="p-1.5 rounded-lg bg-[#100d0a] hover:bg-[#1f1812] text-stone-400 hover:text-stone-200 border border-[#2c2219] transition cursor-pointer active:scale-95"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
 
           {actionsMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-slate-950/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="absolute right-0 mt-2 w-48 bg-[#14110e]/98 backdrop-blur-xl border border-[#2c2219] rounded-xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <button
                 type="button"
                 onClick={() => {
                   setActionsMenuOpen(false);
                   onResetDemo();
                 }}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-amber-950/40 hover:text-amber-300 transition cursor-pointer"
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs text-stone-200 hover:bg-amber-950/40 hover:text-amber-300 transition cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
                 <span>Återställ exempel</span>
@@ -879,9 +879,9 @@ export const Topbar: React.FC<TopbarProps> = ({
             type="button"
             onClick={onOpenSettings}
             title="Öppna Inställningar (Tema, Ljud, Bakgrundseffekter)"
-            className="p-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 hover:border-fuchsia-400 transition cursor-pointer shadow-xs active:scale-95"
+            className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:border-amber-400 transition cursor-pointer shadow-xs active:scale-95"
           >
-            <Sliders className="w-3.5 h-3.5 text-fuchsia-400" />
+            <Sliders className="w-3.5 h-3.5 text-amber-400" />
           </button>
         )}
 
@@ -898,7 +898,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 setActionsMenuOpen(false);
               }}
               title="Användarprofil & Kontomeny"
-              className="flex items-center gap-2 bg-slate-900/90 hover:bg-slate-850 pl-1.5 pr-2 py-1 rounded-xl border border-slate-800 hover:border-slate-700 transition cursor-pointer active:scale-95 shadow-xs"
+              className="flex items-center gap-2 bg-[#100d0a] hover:bg-[#1a140f] pl-1.5 pr-2 py-1 rounded-xl border border-[#2c2219] hover:border-[#3d2e20] transition cursor-pointer active:scale-95 shadow-xs"
             >
               <UserAvatar
                 avatarId={userProfile?.avatarId || 'avatar_cyber_hacker'}
@@ -908,20 +908,20 @@ export const Topbar: React.FC<TopbarProps> = ({
                 status={userProfile?.statusBadge || 'active'}
               />
               <div className="hidden lg:flex flex-col text-left">
-                <span className="text-[11px] font-bold text-white font-orbitron truncate max-w-[75px] leading-tight">
+                <span className="text-[11px] font-bold text-stone-100 font-orbitron truncate max-w-[75px] leading-tight">
                   {userProfile?.username || currentUser.username}
                 </span>
-                <span className="text-[9px] font-mono text-cyan-400/80 leading-none truncate max-w-[75px]">
+                <span className="text-[9px] font-mono text-amber-400/80 leading-none truncate max-w-[75px]">
                   {userProfile?.roleTitle || 'Arkitekt'}
                 </span>
               </div>
-              <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 text-stone-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* User Menu Popover */}
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-slate-950/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="px-2.5 py-2 border-b border-slate-800 mb-1 flex items-center gap-2.5">
+              <div className="absolute right-0 mt-2 w-56 bg-[#14110e]/98 backdrop-blur-xl border border-[#2c2219] rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-2.5 py-2 border-b border-[#2c2219] mb-1 flex items-center gap-2.5">
                   <UserAvatar
                     avatarId={userProfile?.avatarId || 'avatar_cyber_hacker'}
                     customUrl={userProfile?.avatarCustomUrl}
@@ -930,13 +930,13 @@ export const Topbar: React.FC<TopbarProps> = ({
                     status={userProfile?.statusBadge || 'active'}
                   />
                   <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-white font-orbitron truncate">
+                    <span className="text-xs font-bold text-stone-100 font-orbitron truncate">
                       {userProfile?.username || currentUser.username}
                     </span>
-                    <span className="text-[10px] font-mono text-cyan-400 truncate">
+                    <span className="text-[10px] font-mono text-amber-400 truncate">
                       {userProfile?.roleTitle || 'Nätverksarkitekt'}
                     </span>
-                    <span className="text-[9px] text-slate-500 font-sans truncate max-w-[130px]">
+                    <span className="text-[9px] text-stone-500 font-sans truncate max-w-[130px]">
                       {currentUser.email}
                     </span>
                   </div>
@@ -950,9 +950,9 @@ export const Topbar: React.FC<TopbarProps> = ({
                         setUserMenuOpen(false);
                         onOpenSettings();
                       }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-850 hover:text-cyan-300 transition cursor-pointer"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-xs text-stone-200 hover:bg-[#201812] hover:text-amber-300 transition cursor-pointer"
                     >
-                      <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                      <Sliders className="w-3.5 h-3.5 text-amber-400" />
                       <span>Redigera profil & inställningar</span>
                     </button>
                   )}

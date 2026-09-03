@@ -35,6 +35,8 @@ import {
   Heart,
   Activity,
   Wand2,
+  Focus,
+  GripVertical,
   StickyNote as StickyNoteIcon,
 } from 'lucide-react';
 import {
@@ -326,6 +328,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [multiDragStart, setMultiDragStart] = useState<{
+    initialPositions: Array<{ id: string; x: number; y: number }>;
+    draggedNodeInitial: { x: number; y: number };
+  } | null>(null);
+  const multiDragStartRef = useRef(multiDragStart);
+  multiDragStartRef.current = multiDragStart;
 
   // Sticky Note Dragging State
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
@@ -348,6 +356,106 @@ export const Canvas: React.FC<CanvasProps> = ({
     currentY: number;
   } | null>(null);
 
+  // Draggable Quick Layout & Note Floating Toolbar State
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem('network_quick_toolbar_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch {
+      // Ignore error
+    }
+    return null;
+  });
+  const [isDraggingToolbar, setIsDraggingToolbar] = useState<boolean>(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const toolbarDragOffsetRef = useRef<{ offsetX: number; offsetY: number }>({ offsetX: 0, offsetY: 0 });
+  const isDraggingToolbarRef = useRef(isDraggingToolbar);
+  isDraggingToolbarRef.current = isDraggingToolbar;
+  const toolbarPosRef = useRef(toolbarPos);
+  toolbarPosRef.current = toolbarPos;
+
+  // Focus Mode (Fokus-läge) State
+  const [focusModeNodeId, setFocusModeNodeId] = useState<string | null>(null);
+  const [focusModePreviousView, setFocusModePreviousView] = useState<{ pan: { x: number; y: number }; zoom: number } | null>(null);
+  const focusModeNodeIdRef = useRef(focusModeNodeId);
+  focusModeNodeIdRef.current = focusModeNodeId;
+  const [focusHudPos, setFocusHudPos] = useState<{ x: number; y: number } | null>(null);
+  const [isDraggingFocusHud, setIsDraggingFocusHud] = useState<boolean>(false);
+  const focusHudRef = useRef<HTMLDivElement>(null);
+  const focusHudDragOffsetRef = useRef<{ offsetX: number; offsetY: number }>({ offsetX: 0, offsetY: 0 });
+  const isDraggingFocusHudRef = useRef(isDraggingFocusHud);
+  isDraggingFocusHudRef.current = isDraggingFocusHud;
+
+  // Calculate focused segment members when Focus Mode is active
+  const { focusedNodeIdsSet, focusedLinkIdsSet, focusedContainerIdsSet, focusedNode } = React.useMemo(() => {
+    if (!focusModeNodeId) {
+      return {
+        focusedNodeIdsSet: new Set<string>(),
+        focusedLinkIdsSet: new Set<string>(),
+        focusedContainerIdsSet: new Set<string>(),
+        focusedNode: null,
+      };
+    }
+
+    const targetNode = nodes.find((n) => n.id === focusModeNodeId) || null;
+    if (!targetNode) {
+      return {
+        focusedNodeIdsSet: new Set<string>(),
+        focusedLinkIdsSet: new Set<string>(),
+        focusedContainerIdsSet: new Set<string>(),
+        focusedNode: null,
+      };
+    }
+
+    const nodeIds = new Set<string>([focusModeNodeId]);
+
+    // 1. All directly connected neighbor nodes via links
+    const directLinks = links.filter((l) => l.a === focusModeNodeId || l.b === focusModeNodeId);
+    directLinks.forEach((l) => {
+      nodeIds.add(l.a);
+      nodeIds.add(l.b);
+    });
+
+    // 2. Nodes in the same subnet / IP prefix if available
+    const focusSubnet = targetNode.subnet;
+    const focusIpParts = targetNode.ip ? targetNode.ip.split('.') : null;
+    const focusIpPrefix = focusIpParts && focusIpParts.length === 4 ? focusIpParts.slice(0, 3).join('.') : null;
+
+    if (focusSubnet || focusIpPrefix) {
+      nodes.forEach((n) => {
+        if (focusSubnet && n.subnet === focusSubnet) {
+          nodeIds.add(n.id);
+        } else if (focusIpPrefix && n.ip && n.ip.startsWith(`${focusIpPrefix}.`)) {
+          nodeIds.add(n.id);
+        }
+      });
+    }
+
+    // 3. Containers containing the target node
+    const relatedContainers = (containers || []).filter((c) => c.nodeIds?.includes(focusModeNodeId));
+    relatedContainers.forEach((c) => {
+      c.nodeIds?.forEach((id) => nodeIds.add(id));
+    });
+
+    const linkIds = new Set<string>(
+      links.filter((l) => nodeIds.has(l.a) && nodeIds.has(l.b)).map((l) => l.id)
+    );
+
+    const containerIds = new Set<string>(relatedContainers.map((c) => c.id));
+
+    return {
+      focusedNodeIdsSet: nodeIds,
+      focusedLinkIdsSet: linkIds,
+      focusedContainerIdsSet: containerIds,
+      focusedNode: targetNode,
+    };
+  }, [focusModeNodeId, nodes, links, containers]);
+
   // Canvas bounds
   const CANVAS_WIDTH = 1800;
   const CANVAS_HEIGHT = 1200;
@@ -362,14 +470,56 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Helper to get category-specific styling classes for the device node box
   const getNodeCategoryClasses = (type: DeviceType, isSelected: boolean) => {
+    const isHacker = isHackerDevice(type);
+
+    if (type === 'quantum_qkd') {
+      return {
+        bg: 'bg-purple-950/40 backdrop-blur-md',
+        border: isSelected
+          ? 'border-purple-400 ring-4 ring-purple-500/40 shadow-[0_0_24px_rgba(192,132,252,0.8)] scale-105'
+          : 'border-purple-500/40 hover:border-purple-300 shadow-[0_4px_16px_rgba(168,85,247,0.3)] hover:scale-105',
+      };
+    }
+    if (type === 'ai_cluster') {
+      return {
+        bg: 'bg-emerald-950/40 backdrop-blur-md',
+        border: isSelected
+          ? 'border-emerald-400 ring-4 ring-emerald-500/40 shadow-[0_0_24px_rgba(52,211,153,0.8)] scale-105'
+          : 'border-emerald-500/40 hover:border-emerald-300 shadow-[0_4px_16px_rgba(16,185,129,0.3)] hover:scale-105',
+      };
+    }
+    if (type === 'scada_rtu') {
+      return {
+        bg: 'bg-orange-950/40 backdrop-blur-md',
+        border: isSelected
+          ? 'border-orange-400 ring-4 ring-orange-500/40 shadow-[0_0_24px_rgba(249,115,22,0.8)] scale-105'
+          : 'border-orange-500/40 hover:border-orange-300 shadow-[0_4px_16px_rgba(234,88,12,0.3)] hover:scale-105',
+      };
+    }
+    if (type === 'satellite_ground' || type === 'sdwan_edge') {
+      return {
+        bg: 'bg-cyan-950/40 backdrop-blur-md',
+        border: isSelected
+          ? 'border-cyan-400 ring-4 ring-cyan-500/40 shadow-[0_0_22px_rgba(6,182,212,0.8)] scale-105'
+          : 'border-cyan-500/40 hover:border-cyan-300 shadow-[0_4px_16px_rgba(14,165,233,0.3)] hover:scale-105',
+      };
+    }
+    if (type === 'casb_proxy' || type === 'waf' || type === 'honeypot' || type === 'ddos_scrubber' || type === 'siem_soc' || type === 'hsm_vault') {
+      return {
+        bg: 'bg-rose-950/30 backdrop-blur-md',
+        border: isSelected
+          ? 'border-rose-400 ring-4 ring-rose-500/40 shadow-[0_0_22px_rgba(244,63,94,0.7)] scale-105'
+          : 'border-rose-500/40 hover:border-rose-300 shadow-[0_4px_16px_rgba(225,29,72,0.25)] hover:scale-105',
+      };
+    }
+
     const isServer = type.startsWith('server_');
     const isClient = type.startsWith('client_');
     const isIoT = type.startsWith('iot_');
     const isSwitchOrAp = type === 'switch' || type === 'l3_switch' || type === 'wifi_ap';
-    const isRouter = type === 'router' || type === 'wifi_router';
-    const isFirewall = type === 'firewall';
+    const isRouter = type === 'router' || type === 'wifi_router' || type === 'load_balancer';
+    const isFirewall = type === 'firewall' || type === 'ids_ips';
     const isInternet = type === 'internet';
-    const isHacker = isHackerDevice(type);
 
     if (isServer) {
       return {
@@ -570,6 +720,196 @@ export const Canvas: React.FC<CanvasProps> = ({
     });
   };
 
+  // Dedicated Focus Mode handler: Centers and zooms onto the local segment of a specific node
+  const handleToggleFocusMode = (nodeId: string) => {
+    if (focusModeNodeId === nodeId) {
+      handleExitFocusMode();
+      return;
+    }
+
+    if (!focusModeNodeId) {
+      setFocusModePreviousView({ pan: { ...pan }, zoom });
+    }
+
+    setFocusModeNodeId(nodeId);
+
+    const targetNode = nodes.find((n) => n.id === nodeId);
+    if (!targetNode) return;
+
+    // Collect direct neighbors and local segment
+    const directLinks = links.filter((l) => l.a === nodeId || l.b === nodeId);
+    const segmentNodeIds = new Set<string>([nodeId]);
+    directLinks.forEach((l) => {
+      segmentNodeIds.add(l.a);
+      segmentNodeIds.add(l.b);
+    });
+
+    const segmentNodes = nodes.filter((n) => segmentNodeIds.has(n.id));
+    if (segmentNodes.length === 0) return;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    segmentNodes.forEach((n) => {
+      if (n.x < minX) minX = n.x;
+      if (n.x > maxX) maxX = n.x;
+      if (n.y < minY) minY = n.y;
+      if (n.y > maxY) maxY = n.y;
+    });
+
+    if (!containerRef.current) return;
+    const containerW = containerRef.current.clientWidth || 1000;
+    const containerH = containerRef.current.clientHeight || 700;
+
+    const pad = 150;
+    const segW = Math.max(300, maxX - minX + pad * 2);
+    const segH = Math.max(260, maxY - minY + pad * 2);
+
+    const scaleX = containerW / segW;
+    const scaleY = containerH / segH;
+    const targetZoom = Math.min(Math.max(0.85, Math.min(scaleX, scaleY, 1.85)), 2.2);
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    setZoom(+targetZoom.toFixed(2));
+    setPan({
+      x: Math.round(containerW / 2 - centerX * targetZoom),
+      y: Math.round(containerH / 2 - centerY * targetZoom),
+    });
+  };
+
+  const handleExitFocusMode = () => {
+    setFocusModeNodeId(null);
+    if (focusModePreviousView) {
+      setPan(focusModePreviousView.pan);
+      setZoom(focusModePreviousView.zoom);
+      setFocusModePreviousView(null);
+    }
+  };
+
+  // Draggable Toolbar Event Handlers (Mouse & Touch)
+  const handleToolbarMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button') && !target.closest('.toolbar-drag-handle')) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!toolbarRef.current || !containerRef.current) return;
+    const toolbarRect = toolbarRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    const currentLeft = toolbarRect.left - containerRect.left;
+    const currentTop = toolbarRect.top - containerRect.top;
+
+    toolbarDragOffsetRef.current = {
+      offsetX: e.clientX - toolbarRect.left,
+      offsetY: e.clientY - toolbarRect.top,
+    };
+
+    if (!toolbarPos) {
+      setToolbarPos({ x: currentLeft, y: currentTop });
+    }
+
+    setIsDraggingToolbar(true);
+  };
+
+  const handleToolbarTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') && !target.closest('.toolbar-drag-handle')) {
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+
+    if (!toolbarRef.current || !containerRef.current) return;
+    const toolbarRect = toolbarRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    const currentLeft = toolbarRect.left - containerRect.left;
+    const currentTop = toolbarRect.top - containerRect.top;
+
+    toolbarDragOffsetRef.current = {
+      offsetX: touch.clientX - toolbarRect.left,
+      offsetY: touch.clientY - toolbarRect.top,
+    };
+
+    if (!toolbarPos) {
+      setToolbarPos({ x: currentLeft, y: currentTop });
+    }
+
+    setIsDraggingToolbar(true);
+  };
+
+  // Draggable Focus Mode HUD Handlers
+  const handleFocusHudMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!focusHudRef.current || !containerRef.current) return;
+    const hudRect = focusHudRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    const currentLeft = hudRect.left - containerRect.left;
+    const currentTop = hudRect.top - containerRect.top;
+
+    focusHudDragOffsetRef.current = {
+      offsetX: e.clientX - hudRect.left,
+      offsetY: e.clientY - hudRect.top,
+    };
+
+    if (!focusHudPos) {
+      setFocusHudPos({ x: currentLeft, y: currentTop });
+    }
+
+    setIsDraggingFocusHud(true);
+  };
+
+  const handleFocusHudTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+
+    if (!focusHudRef.current || !containerRef.current) return;
+    const hudRect = focusHudRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    const currentLeft = hudRect.left - containerRect.left;
+    const currentTop = hudRect.top - containerRect.top;
+
+    focusHudDragOffsetRef.current = {
+      offsetX: touch.clientX - hudRect.left,
+      offsetY: touch.clientY - hudRect.top,
+    };
+
+    if (!focusHudPos) {
+      setFocusHudPos({ x: currentLeft, y: currentTop });
+    }
+
+    setIsDraggingFocusHud(true);
+  };
+
+  // Clean up focus mode if focused node gets deleted
+  useEffect(() => {
+    if (focusModeNodeId && !nodes.some((n) => n.id === focusModeNodeId)) {
+      setFocusModeNodeId(null);
+      setFocusModePreviousView(null);
+    }
+  }, [nodes, focusModeNodeId]);
+
   // Global mousemove & mouseup listeners for ultra-smooth drag & drop / panning / cable connecting
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -581,6 +921,40 @@ export const Canvas: React.FC<CanvasProps> = ({
           x: e.clientX - panStartRef.current.x,
           y: e.clientY - panStartRef.current.y,
         });
+        return;
+      }
+
+      // Dragging Quick Layout Toolbar
+      if (isDraggingToolbarRef.current) {
+        const containerW = containerRef.current?.clientWidth || window.innerWidth;
+        const containerH = containerRef.current?.clientHeight || window.innerHeight;
+        const toolbarW = toolbarRef.current?.offsetWidth || 280;
+        const toolbarH = toolbarRef.current?.offsetHeight || 44;
+
+        const rawX = e.clientX - rect.left - toolbarDragOffsetRef.current.offsetX;
+        const rawY = e.clientY - rect.top - toolbarDragOffsetRef.current.offsetY;
+
+        const clampedX = Math.max(8, Math.min(containerW - toolbarW - 8, rawX));
+        const clampedY = Math.max(8, Math.min(containerH - toolbarH - 8, rawY));
+
+        setToolbarPos({ x: clampedX, y: clampedY });
+        return;
+      }
+
+      // Dragging Focus Mode Active HUD
+      if (isDraggingFocusHudRef.current) {
+        const containerW = containerRef.current?.clientWidth || window.innerWidth;
+        const containerH = containerRef.current?.clientHeight || window.innerHeight;
+        const hudW = focusHudRef.current?.offsetWidth || 380;
+        const hudH = focusHudRef.current?.offsetHeight || 50;
+
+        const rawX = e.clientX - rect.left - focusHudDragOffsetRef.current.offsetX;
+        const rawY = e.clientY - rect.top - focusHudDragOffsetRef.current.offsetY;
+
+        const clampedX = Math.max(8, Math.min(containerW - hudW - 8, rawX));
+        const clampedY = Math.max(8, Math.min(containerH - hudH - 8, rawY));
+
+        setFocusHudPos({ x: clampedX, y: clampedY });
         return;
       }
 
@@ -650,7 +1024,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         return;
       }
 
-      // Dragging a single node
+      // Dragging a node (single or multiple selected nodes)
       if (draggingNodeIdRef.current) {
         const rawX = (e.clientX - rect.left - panRef.current.x) / zoomRef.current - dragOffsetRef.current.x;
         const rawY = (e.clientY - rect.top - panRef.current.y) / zoomRef.current - dragOffsetRef.current.y;
@@ -659,9 +1033,14 @@ export const Canvas: React.FC<CanvasProps> = ({
         let finalY = rawY;
         const guides: Array<{ type: 'x' | 'y'; coord: number; label: string }> = [];
 
-        const otherNodes = nodesRef.current.filter((n) => n.id !== draggingNodeIdRef.current);
+        const isMulti = multiDragStartRef.current && multiDragStartRef.current.initialPositions.length > 1;
+        const selectedIdsSet = isMulti
+          ? new Set(multiDragStartRef.current!.initialPositions.map((p) => p.id))
+          : new Set([draggingNodeIdRef.current]);
 
-        // 1. Smart Node-to-Node Alignment
+        const otherNodes = nodesRef.current.filter((n) => !selectedIdsSet.has(n.id));
+
+        // 1. Smart Node-to-Node Alignment (against unselected nodes)
         if (smartAlignRef.current && otherNodes.length > 0) {
           const SNAP_THRESHOLD = 12; // pixels
 
@@ -697,11 +1076,27 @@ export const Canvas: React.FC<CanvasProps> = ({
 
         setActiveGuidelines(guides);
 
-        onUpdateNodePositionRef.current(
-          draggingNodeIdRef.current,
-          Math.max(40, Math.min(CANVAS_WIDTH - 40, finalX)),
-          Math.max(40, Math.min(CANVAS_HEIGHT - 40, finalY))
-        );
+        finalX = Math.max(40, Math.min(CANVAS_WIDTH - 40, finalX));
+        finalY = Math.max(40, Math.min(CANVAS_HEIGHT - 40, finalY));
+
+        if (isMulti && multiDragStartRef.current) {
+          const deltaX = finalX - multiDragStartRef.current.draggedNodeInitial.x;
+          const deltaY = finalY - multiDragStartRef.current.draggedNodeInitial.y;
+
+          const updates = multiDragStartRef.current.initialPositions.map((item) => ({
+            id: item.id,
+            x: Math.max(40, Math.min(CANVAS_WIDTH - 40, Math.round(item.x + deltaX))),
+            y: Math.max(40, Math.min(CANVAS_HEIGHT - 40, Math.round(item.y + deltaY))),
+          }));
+
+          if (onUpdateMultipleNodePositionsRef.current) {
+            onUpdateMultipleNodePositionsRef.current(updates);
+          } else {
+            updates.forEach((u) => onUpdateNodePositionRef.current(u.id, u.x, u.y));
+          }
+        } else {
+          onUpdateNodePositionRef.current(draggingNodeIdRef.current, Math.round(finalX), Math.round(finalY));
+        }
       }
 
       if (connectingNodeIdRef.current) {
@@ -726,8 +1121,24 @@ export const Canvas: React.FC<CanvasProps> = ({
     const handleGlobalMouseUp = (e: MouseEvent) => {
       const wasDragging = draggingNodeIdRef.current || draggingContainerIdRef.current || draggingNoteIdRef.current;
 
+      if (isDraggingToolbarRef.current) {
+        setIsDraggingToolbar(false);
+        if (toolbarPosRef.current) {
+          try {
+            localStorage.setItem('network_quick_toolbar_pos', JSON.stringify(toolbarPosRef.current));
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      if (isDraggingFocusHudRef.current) {
+        setIsDraggingFocusHud(false);
+      }
+
       setIsPanning(false);
       setDraggingNodeId(null);
+      setMultiDragStart(null);
       setDraggingContainerId(null);
       setDraggingNoteId(null);
       setContainerDragStart(null);
@@ -795,6 +1206,9 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (focusModeNodeIdRef.current) {
+          handleExitFocusMode();
+        }
         setConnectingNodeId(null);
         setConnectingTargetNodeId(null);
         setDragPointer(null);
@@ -820,7 +1234,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
 
       const touch = e.touches[0];
-      const wasInteracting = isPanningRef.current || draggingNodeIdRef.current || draggingContainerIdRef.current || draggingNoteIdRef.current;
+      const wasInteracting = isPanningRef.current || draggingNodeIdRef.current || draggingContainerIdRef.current || draggingNoteIdRef.current || isDraggingToolbarRef.current || isDraggingFocusHudRef.current;
       if (wasInteracting) {
         e.preventDefault();
       }
@@ -949,9 +1363,11 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Dynamic Background Style Generator
   const getCanvasBackground = () => {
+    const isVintage = !isLight && (currentThemeId === 'vintage_terminal' || !currentThemeId);
+
     if (gridStyle === 'off') {
       return {
-        backgroundColor: isLight ? '#f0f6fc' : '#020617',
+        backgroundColor: isLight ? '#f0f6fc' : isVintage ? '#0e0c0a' : '#020617',
       };
     }
     if (gridStyle === 'blueprint' || currentThemeId === 'blueprint_light') {
@@ -986,13 +1402,20 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
     if (gridStyle === 'lines') {
       return {
-        backgroundColor: isLight ? '#f0f6fc' : '#020617',
+        backgroundColor: isLight ? '#f0f6fc' : isVintage ? '#0e0c0a' : '#020617',
         backgroundImage: isLight
           ? `
             linear-gradient(to right, rgba(100, 116, 139, 0.16) 1px, transparent 1px),
             linear-gradient(to bottom, rgba(100, 116, 139, 0.16) 1px, transparent 1px),
             linear-gradient(to right, rgba(2, 132, 199, 0.3) 1.5px, transparent 1.5px),
             linear-gradient(to bottom, rgba(2, 132, 199, 0.3) 1.5px, transparent 1.5px)
+          `
+          : isVintage
+          ? `
+            linear-gradient(to right, rgba(146, 107, 72, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(146, 107, 72, 0.08) 1px, transparent 1px),
+            linear-gradient(to right, rgba(245, 158, 11, 0.22) 1.5px, transparent 1.5px),
+            linear-gradient(to bottom, rgba(245, 158, 11, 0.22) 1.5px, transparent 1.5px)
           `
           : `
             linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
@@ -1016,11 +1439,16 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
     // Default: 'dots'
     return {
-      backgroundColor: isLight ? '#f0f6fc' : '#020617',
+      backgroundColor: isLight ? '#f0f6fc' : isVintage ? '#0e0c0a' : '#020617',
       backgroundImage: isLight
         ? `
           radial-gradient(circle, rgba(2, 132, 199, 0.35) 1.5px, transparent 1.5px),
           radial-gradient(circle, rgba(15, 23, 42, 0.22) 2px, transparent 2px)
+        `
+        : isVintage
+        ? `
+          radial-gradient(circle, rgba(245, 158, 11, 0.28) 1.5px, transparent 1.5px),
+          radial-gradient(circle, rgba(217, 119, 6, 0.38) 2px, transparent 2px)
         `
         : `
           radial-gradient(circle, rgba(56, 189, 248, 0.18) 1.5px, transparent 1.5px),
@@ -1115,51 +1543,56 @@ export const Canvas: React.FC<CanvasProps> = ({
       onMouseDown={handleCanvasMouseDown}
       onTouchStart={handleCanvasTouchStart}
       onWheel={handleWheel}
-      className="relative flex-1 h-full bg-slate-950 overflow-hidden cursor-crosshair select-none"
+      onDoubleClick={(e) => {
+        if (e.target === containerRef.current || (e.target as HTMLElement)?.tagName === 'svg') {
+          handleExitFocusMode();
+        }
+      }}
+      className="relative flex-1 h-full bg-[#0e0c0a] overflow-hidden cursor-crosshair select-none touch-canvas canvas-container"
       style={getCanvasBackground()}
     >
       {/* Zoom / Viewport & Grid Controls Overlay */}
-      <div className={`absolute top-4 ${isPaletteCollapsed ? 'left-14' : 'left-4'} z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl shadow-lg backdrop-blur-md transition-all duration-200`}>
+      <div className={`absolute top-3 ${isPaletteCollapsed ? 'left-14' : 'left-3'} z-20 flex items-center gap-1 sm:gap-1.5 bg-[#16120e]/95 border border-[#2c2219] p-1 sm:p-1.5 rounded-xl shadow-xl backdrop-blur-md transition-all duration-200`}>
         <button
           onClick={handleZoomIn}
           title="Zooma in"
-          className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-[#241c14] text-stone-300 hover:text-amber-400 transition cursor-pointer"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
-        <span className="text-xs font-mono font-medium text-slate-400 px-1 min-w-[40px] text-center">
+        <span className="text-xs font-mono font-bold text-amber-400/90 px-1 min-w-[36px] text-center">
           {Math.round(zoom * 100)}%
         </span>
         <button
           onClick={handleZoomOut}
           title="Zooma ut"
-          className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-[#241c14] text-stone-300 hover:text-amber-400 transition cursor-pointer"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleResetView}
           title="Återställ vy (100% & centrerad)"
-          className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-[#241c14] text-stone-300 hover:text-amber-400 transition cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
 
-        <div className="w-px h-4 bg-slate-800 mx-0.5" />
+        <div className="w-px h-4 bg-[#2c2219] mx-0.5" />
 
         {/* Magnetic Snap Button */}
         <button
           onClick={() => setSnapToGrid(!snapToGrid)}
           title={`Magnetiskt rutnät (${snapToGrid ? 'PÅ' : 'AV'}). Enheter snäpper automatiskt.`}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
             snapToGrid
-              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-sm shadow-cyan-500/20'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-800'
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm shadow-amber-500/20'
+              : 'bg-[#120f0c] hover:bg-[#241c14] text-stone-400 hover:text-stone-200 border-[#2c2219]'
           }`}
         >
-          <Magnet className={`w-3.5 h-3.5 ${snapToGrid ? 'text-cyan-400 animate-pulse' : ''}`} />
-          <span className="font-mono text-[11px] hidden sm:inline">Magnet: {snapToGrid ? 'PÅ' : 'AV'}</span>
-          <span className={`w-1.5 h-1.5 rounded-full ${snapToGrid ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`} />
+          <Magnet className={`w-3.5 h-3.5 ${snapToGrid ? 'text-amber-400 animate-pulse' : ''}`} />
+          <span className="font-mono text-[11px] hidden md:inline">Magnet: {snapToGrid ? 'PÅ' : 'AV'}</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${snapToGrid ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-stone-600'}`} />
         </button>
 
         {/* Create Container / Subnet Cloud Button */}
@@ -1167,14 +1600,14 @@ export const Canvas: React.FC<CanvasProps> = ({
           <button
             onClick={() => onOpenContainerModal(null, selectedNodeIds.length > 0 ? selectedNodeIds : undefined)}
             title="Skapa ny Container / Subnet-moln för att gruppera och strukturera enheter"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-500/20 to-teal-500/20 text-cyan-300 border border-cyan-500/50 hover:border-cyan-400 shadow-sm transition cursor-pointer"
+            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:border-amber-400 shadow-sm transition cursor-pointer"
           >
-            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <Layers className="w-3.5 h-3.5 text-amber-400" />
             <span className="text-[11px] font-medium hidden md:inline">+ Container</span>
           </button>
         )}
 
-        {/* Grid Visual Style Switcher */}
+        {/* Grid Visual Style Switcher - visible on medium screens and up */}
         <button
           onClick={() => {
             const styles: Array<'dots' | 'lines' | 'blueprint' | 'off'> = ['dots', 'lines', 'blueprint', 'off'];
@@ -1182,13 +1615,13 @@ export const Canvas: React.FC<CanvasProps> = ({
             setGridStyle(next);
           }}
           title="Växla rutnätsstil (Dots / Linjer / Blueprint / Dold)"
-          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-cyan-300 bg-slate-900 hover:bg-slate-800 border border-slate-800 transition cursor-pointer"
+          className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-stone-300 hover:text-amber-300 bg-[#120f0c] hover:bg-[#241c14] border border-[#2c2219] transition cursor-pointer"
         >
-          <Grid className="w-3.5 h-3.5 text-slate-400" />
+          <Grid className="w-3.5 h-3.5 text-stone-400" />
           <span className="text-[11px] capitalize">{gridStyle}</span>
         </button>
 
-        {/* Grid Size Cycle Button */}
+        {/* Grid Size Cycle Button - hidden on narrow screens to prevent crowding */}
         <button
           onClick={() => {
             const sizes = [20, 40, 60];
@@ -1196,29 +1629,47 @@ export const Canvas: React.FC<CanvasProps> = ({
             setGridSize(nextSize);
           }}
           title="Justera rutnätsavstånd (20px / 40px / 60px)"
-          className="px-2 py-1 rounded-lg text-[11px] font-mono text-slate-400 hover:text-cyan-300 bg-slate-900 hover:bg-slate-800 border border-slate-800 transition cursor-pointer"
+          className="hidden lg:block px-2 py-1 rounded-lg text-[11px] font-mono text-stone-400 hover:text-amber-300 bg-[#120f0c] hover:bg-[#241c14] border border-[#2c2219] transition cursor-pointer"
         >
           {gridSize}px
         </button>
 
-        <div className="w-px h-4 bg-slate-800 mx-0.5" />
+        <div className="w-px h-4 bg-[#2c2219] mx-0.5" />
         <button
           onClick={handleToggleDebugger}
           title="Växla Visual Debugger (Visa IP-adresser & subnät direkt på canvas)"
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
             isDebuggerActive
-              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-sm shadow-cyan-500/20'
-              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-800'
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm shadow-amber-500/20'
+              : 'bg-[#120f0c] hover:bg-[#241c14] text-stone-400 hover:text-stone-200 border-[#2c2219]'
           }`}
         >
-          <Bug className={`w-3.5 h-3.5 ${isDebuggerActive ? 'text-cyan-400 animate-pulse' : ''}`} />
-          <span className="font-mono text-[11px] hidden sm:inline">Debugger: {isDebuggerActive ? 'PÅ' : 'AV'}</span>
-          <span className={`w-1.5 h-1.5 rounded-full ${isDebuggerActive ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`} />
+          <Bug className={`w-3.5 h-3.5 ${isDebuggerActive ? 'text-amber-400 animate-pulse' : ''}`} />
+          <span className="font-mono text-[11px] hidden md:inline">Debugger: {isDebuggerActive ? 'PÅ' : 'AV'}</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${isDebuggerActive ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-stone-600'}`} />
         </button>
+
+        {/* Focus Mode Status / Toggle Indicator in Toolbar */}
+        {focusModeNodeId && (
+          <>
+            <div className="w-px h-4 bg-cyan-800/80 mx-0.5" />
+            <button
+              onClick={handleExitFocusMode}
+              title="Fokus-läge är aktivt. Klicka för att avsluta och se hela topologin."
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/60 shadow-sm shadow-cyan-500/20 transition cursor-pointer animate-pulse"
+            >
+              <Focus className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="font-mono text-[11px] hidden sm:inline">Fokus: {focusedNode?.name || 'Aktiv'}</span>
+              <span className="bg-cyan-500 text-slate-950 px-1.5 py-0.2 text-[9px] rounded font-black">
+                Avsluta
+              </span>
+            </button>
+          </>
+        )}
 
         {nodesWithWarningsCount > 0 && (
           <>
-            <div className="w-px h-4 bg-slate-800 mx-0.5" />
+            <div className="w-px h-4 bg-[#2c2219] mx-0.5" />
             <button
               onClick={() => onOpenAutoRepair && onOpenAutoRepair()}
               title={`${nodesWithWarningsCount} enheter har konfigurationsfel. Klicka för att öppna Assistenten eller fixa automatiskt!`}
@@ -1226,7 +1677,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 animate-pulse" />
               <span className="font-mono text-[11px]">{nodesWithWarningsCount} Fel</span>
-              <span className="bg-rose-500 text-slate-950 px-1.5 py-0.2 text-[9px] rounded font-black">
+              <span className="bg-rose-500 text-stone-950 px-1.5 py-0.2 text-[9px] rounded font-black">
                 Fixa
               </span>
             </button>
@@ -1234,9 +1685,231 @@ export const Canvas: React.FC<CanvasProps> = ({
         )}
       </div>
 
+      {/* Draggable Quick Layout & Note Floating Toolbar */}
+      <div
+        ref={toolbarRef}
+        onMouseDown={handleToolbarMouseDown}
+        onTouchStart={handleToolbarTouchStart}
+        onDoubleClick={(e) => {
+          const target = e.target as HTMLElement;
+          if (!target.closest('button') || target.closest('.toolbar-drag-handle')) {
+            e.stopPropagation();
+            setToolbarPos(null);
+            try {
+              localStorage.removeItem('network_quick_toolbar_pos');
+            } catch {
+              // ignore
+            }
+          }
+        }}
+        style={
+          toolbarPos
+            ? {
+                position: 'absolute',
+                left: `${toolbarPos.x}px`,
+                top: `${toolbarPos.y}px`,
+                zIndex: 25,
+              }
+            : {
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                zIndex: 25,
+              }
+        }
+        className={`flex items-center gap-1.5 bg-[#120f0c]/95 border ${
+          isDraggingToolbar
+            ? 'border-cyan-400 ring-2 ring-cyan-400/60 shadow-[0_0_25px_rgba(6,182,212,0.45)] scale-[1.02] cursor-grabbing'
+            : 'border-cyan-500/40 hover:border-cyan-400/80 shadow-2xl backdrop-blur-md cursor-grab'
+        } p-1.5 rounded-2xl select-none transition-shadow duration-150 group`}
+        title="Dra för att flytta denna verktygsrad fritt vart som helst (Dubbelklicka för att återställa)"
+      >
+        {/* Drag Handle Grip Icon */}
+        <div
+          className="toolbar-drag-handle flex items-center justify-center pl-1 pr-0.5 py-1 text-stone-500 group-hover:text-cyan-400 transition-colors cursor-grab active:cursor-grabbing"
+          title="Dra här för att flytta verktygsraden fritt på skärmen"
+        >
+          <GripVertical className="w-4 h-4 shrink-0" />
+        </div>
+
+        {/* + Ny Post-it Button */}
+        {onAddStickyNote && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddStickyNote();
+            }}
+            title="Skapa en Digital Post-it på canvassen för att dokumentera nätverket"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-amber-950 font-extrabold text-xs shadow-md shadow-amber-400/20 transition cursor-pointer shrink-0"
+          >
+            <StickyNoteIcon className="w-3.5 h-3.5 fill-amber-950" />
+            <span>+ Ny Post-it</span>
+          </button>
+        )}
+
+        {/* ⚡ Auto-Layout Button */}
+        {onQuickAutoLayout && nodes.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickAutoLayout();
+            }}
+            title="1-Klick Automatisk D3 Layout-optimering (Trassla upp nätverk och linjera alla enheter)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 active:scale-95 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 transition cursor-pointer shrink-0"
+          >
+            <Wand2 className="w-3.5 h-3.5 fill-slate-950" />
+            <span>⚡ Auto-Layout</span>
+          </button>
+        )}
+
+        {/* 🎛 Anpassa Layout Button */}
+        {onOpenLayoutOptimizer && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenLayoutOptimizer();
+            }}
+            title="Öppna D3 Layout-inställningar (Hierarkisk, Kraftfält, Ring, Rutnät)"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#1c1611] hover:bg-[#281f18] text-stone-200 hover:text-cyan-300 border border-[#35281e] active:scale-95 text-xs font-semibold transition cursor-pointer shrink-0"
+          >
+            <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Anpassa</span>
+          </button>
+        )}
+
+        {/* Reset Position Button if moved */}
+        {toolbarPos && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setToolbarPos(null);
+              try {
+                localStorage.removeItem('network_quick_toolbar_pos');
+              } catch {
+                // ignore
+              }
+            }}
+            title="Återställ verktygsradens position till standard (uppe till höger)"
+            className="p-1 rounded-lg text-stone-500 hover:text-rose-400 hover:bg-stone-900/60 transition cursor-pointer ml-0.5"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Floating Focus Mode Active HUD Banner */}
+      {focusModeNodeId && focusedNode && (
+        <div
+          ref={focusHudRef}
+          onMouseDown={handleFocusHudMouseDown}
+          onTouchStart={handleFocusHudTouchStart}
+          onDoubleClick={(e) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('button')) {
+              e.stopPropagation();
+              setFocusHudPos(null);
+            }
+          }}
+          style={
+            focusHudPos
+              ? {
+                  position: 'absolute',
+                  left: `${focusHudPos.x}px`,
+                  top: `${focusHudPos.y}px`,
+                  zIndex: 30,
+                }
+              : {
+                  position: 'absolute',
+                  top: '64px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 30,
+                }
+          }
+          className={`flex items-center gap-3 bg-[#120f0c]/95 border-2 ${
+            isDraggingFocusHud
+              ? 'border-cyan-400 ring-2 ring-cyan-400/60 shadow-[0_0_40px_rgba(6,182,212,0.6)] cursor-grabbing scale-[1.01]'
+              : 'border-cyan-500/80 hover:border-cyan-400 shadow-[0_0_35px_rgba(6,182,212,0.45)] cursor-grab'
+          } px-4 py-2.5 rounded-2xl backdrop-blur-xl animate-fade-in text-xs max-w-[92vw] select-none transition-shadow`}
+          title="Dra för att flytta denna fokus-panel fritt (Dubbelklicka för att återställa position)"
+        >
+          {/* Drag Handle Grip Icon */}
+          <div
+            className="flex items-center justify-center -ml-1 pr-1 text-stone-500 hover:text-cyan-400 transition-colors cursor-grab active:cursor-grabbing"
+            title="Dra för att flytta panelen"
+          >
+            <GripVertical className="w-4 h-4 shrink-0" />
+          </div>
+
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-cyan-950/90 border border-cyan-500/70 flex items-center justify-center p-1 shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.5)]">
+              <RealisticDeviceIcon type={focusedNode.type} size="sm" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-black text-cyan-400 tracking-wider text-[11px] flex items-center gap-1">
+                  <Focus className="w-3 h-3 text-cyan-400 animate-spin-slow" />
+                  FOKUS-LÄGE:
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/50 font-bold truncate max-w-[140px]">
+                  {focusedNode.name}
+                </span>
+                {focusedNode.ip && (
+                  <span className="text-[10.5px] text-stone-400 font-mono hidden sm:inline">
+                    ({focusedNode.ip})
+                  </span>
+                )}
+              </div>
+              <div className="text-[10.5px] text-stone-300 mt-0.5 flex items-center gap-2 flex-wrap">
+                <span className="text-cyan-200/90 font-medium">
+                  {Math.max(0, focusedNodeIdsSet.size - 1)} anslutna enheter i lokalt segment
+                </span>
+                <span className="text-stone-600 hidden md:inline">•</span>
+                <span className="text-stone-400 hidden md:inline">Dubbelklicka nod för att växla / ESC för att återgå</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 ml-1 sm:ml-3 border-l border-[#2c2219] pl-2 sm:pl-3 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleFocusMode(focusModeNodeId);
+              }}
+              title="Centrera och zooma om på detta segment"
+              className="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 hover:text-white font-semibold text-[11px] border border-cyan-500/50 transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+            >
+              <Maximize2 className="w-3 h-3" />
+              <span className="hidden sm:inline">Centrera</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleExitFocusMode();
+              }}
+              title="Avsluta fokus-läge och återgå till hela nätverket (ESC)"
+              className="px-3 py-1.5 rounded-xl bg-[#241c14] hover:bg-rose-950 text-stone-200 hover:text-rose-200 font-bold text-[11px] border border-[#3a2e22] hover:border-rose-500/60 transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <X className="w-3.5 h-3.5 text-rose-400" />
+              <span>Avsluta</span>
+              <kbd className="text-[9px] bg-stone-900 border border-stone-800 px-1 py-0.2 rounded text-stone-400 font-mono hidden sm:inline">
+                ESC
+              </kbd>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Connection Mode Banner */}
       {connectingNodeId && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-slate-900/95 border border-cyan-500/80 px-4 py-2 rounded-2xl shadow-2xl backdrop-blur-md animate-fade-in text-xs">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-[#16120e]/95 border border-amber-500/80 px-4 py-2 rounded-2xl shadow-2xl backdrop-blur-md animate-fade-in text-xs">
           <div className="flex items-center gap-2">
             <span
               className="w-3 h-3 rounded-full animate-ping"
@@ -1245,16 +1918,16 @@ export const Canvas: React.FC<CanvasProps> = ({
                 boxShadow: `0 0 12px ${currentCableDef.color}`,
               }}
             />
-            <span className="text-slate-200 font-medium">
+            <span className="text-stone-200 font-medium">
               Kopplar kabel från{' '}
-              <strong className="text-cyan-300 font-bold">
+              <strong className="text-amber-300 font-bold">
                 {nodes.find((n) => n.id === connectingNodeId)?.name || 'Enhet'}
               </strong>{' '}
               med kabeltyp <span className="font-mono text-amber-300 font-bold">{currentCableDef.name} ({currentCableDef.badge})</span>
             </span>
           </div>
 
-          <span className="text-slate-400 hidden md:inline">• Klicka på målenhet för att slutföra</span>
+          <span className="text-stone-400 hidden md:inline">• Klicka på målenhet för att slutföra</span>
 
           <button
             type="button"
@@ -1263,7 +1936,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               setConnectingTargetNodeId(null);
               setDragPointer(null);
             }}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-[11px] border border-slate-700 transition cursor-pointer"
+            className="px-2.5 py-1 rounded-lg bg-[#241c14] hover:bg-[#2c2219] text-stone-300 hover:text-amber-200 font-semibold text-[11px] border border-[#3a2e22] transition cursor-pointer"
           >
             Avbryt (ESC)
           </button>
@@ -1272,7 +1945,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
       {/* Main Canvas World Layer */}
       <div
-        className="absolute top-0 left-0 origin-top-left transition-transform duration-75 ease-out"
+        className="absolute top-0 left-0 origin-top-left"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           width: CANVAS_WIDTH,
@@ -1348,9 +2021,14 @@ export const Canvas: React.FC<CanvasProps> = ({
 
             const theme = CONTAINER_THEMES[c.color] || CONTAINER_THEMES.cyan;
             const isSelected = selectedContainerId === c.id;
+            const isContainerInFocus = !focusModeNodeId || focusedContainerIdsSet.has(c.id);
 
             return (
-              <g key={`container-frame-${c.id}`} className="pointer-events-auto">
+              <g
+                key={`container-frame-${c.id}`}
+                className={`${isContainerInFocus ? 'pointer-events-auto' : 'pointer-events-none'} transition-opacity duration-300`}
+                opacity={isContainerInFocus ? 1 : 0.08}
+              >
                 <rect
                   x={minX}
                   y={minY}
@@ -1372,13 +2050,15 @@ export const Canvas: React.FC<CanvasProps> = ({
           {/* Wi-Fi Coverage Radii */}
           {nodes.map((node) => {
             if (!node.on || !node.wifiCoverageRadius) return null;
+            const isNodeInFocus = !focusModeNodeId || focusedNodeIdsSet.has(node.id);
             return (
               <circle
                 key={`wifi-rad-${node.id}`}
                 cx={node.x}
                 cy={node.y}
                 r={node.wifiCoverageRadius}
-                className="fill-teal-500/5 stroke-teal-500/20 stroke-dasharray-[4_4] animate-spin-slow pointer-events-none"
+                className="fill-teal-500/5 stroke-teal-500/20 stroke-dasharray-[4_4] animate-spin-slow pointer-events-none transition-opacity duration-300"
+                opacity={isNodeInFocus ? 1 : 0.05}
                 style={{ animationDuration: '40s' }}
               />
             );
@@ -1400,6 +2080,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             const isSelected = selectedLinkId === link.id;
             const isTesting = testingLinkIds.includes(link.id);
             const isUp = (nodeA?.on ?? true) && (nodeB?.on ?? true);
+            const isLinkInFocus = !focusModeNodeId || focusedLinkIdsSet.has(link.id);
 
             const pathD = calculateLinkPath(posA.x, posA.y, posB.x, posB.y);
 
@@ -1414,7 +2095,11 @@ export const Canvas: React.FC<CanvasProps> = ({
             }
 
             return (
-              <g key={link.id} className="pointer-events-auto">
+              <g
+                key={link.id}
+                className={`${isLinkInFocus ? 'pointer-events-auto' : 'pointer-events-none'} transition-opacity duration-300`}
+                opacity={isLinkInFocus ? 1 : 0.05}
+              >
                 <path
                   d={pathD}
                   fill="none"
@@ -1976,44 +2661,6 @@ export const Canvas: React.FC<CanvasProps> = ({
           </div>
         )}
 
-        {/* Floating Canvas Top-Right Quick Layout & Note Bar */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-slate-950/90 border border-cyan-500/30 p-1.5 rounded-2xl shadow-2xl backdrop-blur-md animate-fade-in">
-          {onAddStickyNote && (
-            <button
-              type="button"
-              onClick={() => onAddStickyNote()}
-              title="Skapa en Digital Post-it på canvassen för att dokumentera nätverket"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-extrabold text-xs shadow-md shadow-amber-400/20 transition cursor-pointer"
-            >
-              <StickyNoteIcon className="w-3.5 h-3.5 fill-amber-950" />
-              <span>+ Ny Post-it</span>
-            </button>
-          )}
-
-          {onQuickAutoLayout && nodes.length > 0 && (
-            <button
-              type="button"
-              onClick={onQuickAutoLayout}
-              title="1-Klick Automatisk D3 Layout-optimering (Trassla upp nätverk och linjera alla enheter)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 transition cursor-pointer"
-            >
-              <Wand2 className="w-3.5 h-3.5 fill-slate-950" />
-              <span>⚡ Auto-Layout</span>
-            </button>
-          )}
-            {onOpenLayoutOptimizer && (
-              <button
-                type="button"
-                onClick={onOpenLayoutOptimizer}
-                title="Öppna D3 Layout-inställningar (Hierarkisk, Kraftfält, Ring, Rutnät)"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-800 text-xs font-semibold transition cursor-pointer"
-              >
-                <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">Anpassa</span>
-              </button>
-            )}
-          </div>
-
         {/* Render Expanded Container Headers & Interactive Overlays */}
         {containers.map((c) => {
           if (c.isCollapsed) return null;
@@ -2025,6 +2672,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
           const theme = CONTAINER_THEMES[c.color] || CONTAINER_THEMES.cyan;
           const IconComp = CONTAINER_ICONS[c.type] || Cloud;
+          const isContainerInFocus = !focusModeNodeId || focusedContainerIdsSet.has(c.id);
 
           return (
             <div
@@ -2033,6 +2681,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                 position: 'absolute',
                 left: minX + 20,
                 top: minY - 14,
+                opacity: isContainerInFocus ? 1 : 0.08,
+                pointerEvents: isContainerInFocus ? 'auto' : 'none',
+                transition: 'opacity 0.3s ease-out',
               }}
               className="z-10 select-none"
             >
@@ -2139,6 +2790,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
           const theme = CONTAINER_THEMES[c.color] || CONTAINER_THEMES.cyan;
           const isSelected = selectedContainerId === c.id;
+          const isContainerInFocus = !focusModeNodeId || focusedContainerIdsSet.has(c.id);
 
           return (
             <div
@@ -2148,6 +2800,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                 left: centerX,
                 top: centerY,
                 transform: 'translate(-50%, -50%)',
+                opacity: isContainerInFocus ? 1 : 0.08,
+                pointerEvents: isContainerInFocus ? 'auto' : 'none',
+                transition: 'opacity 0.3s ease-out',
               }}
               onMouseDown={(e) => {
                 e.stopPropagation();
@@ -2233,6 +2888,9 @@ export const Canvas: React.FC<CanvasProps> = ({
             hoveredNodeId === node.id ||
             isSelected;
 
+          const isNodeInFocus = !focusModeNodeId || focusedNodeIdsSet.has(node.id);
+          const isSelfFocused = focusModeNodeId === node.id;
+
           return (
             <div
               key={node.id}
@@ -2241,6 +2899,14 @@ export const Canvas: React.FC<CanvasProps> = ({
                 left: node.x,
                 top: node.y,
                 transform: 'translate(-50%, -50%)',
+                opacity: isNodeInFocus ? 1 : 0.12,
+                filter: isNodeInFocus ? 'none' : 'blur(1.5px) grayscale(85%)',
+                pointerEvents: isNodeInFocus ? 'auto' : 'none',
+                transition: 'opacity 0.3s ease-out, filter 0.3s ease-out',
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                handleToggleFocusMode(node.id);
               }}
               onMouseEnter={() => setHoveredNodeId(node.id)}
               onMouseLeave={() => setHoveredNodeId(null)}
@@ -2251,9 +2917,23 @@ export const Canvas: React.FC<CanvasProps> = ({
                     onToggleMultiSelectNode(node.id, true);
                   }
                 } else {
-                  onSelectNode(node.id);
-                  if (onMultiSelectNodes && !selectedNodeIds.includes(node.id)) {
-                    onMultiSelectNodes([node.id]);
+                  if (selectedNodeIds.includes(node.id) && selectedNodeIds.length > 1) {
+                    // Maintain current group selection for synchronized multi-node dragging
+                    setMultiDragStart({
+                      initialPositions: nodes
+                        .filter((n) => selectedNodeIds.includes(n.id))
+                        .map((n) => ({ id: n.id, x: n.x, y: n.y })),
+                      draggedNodeInitial: { x: node.x, y: node.y },
+                    });
+                  } else {
+                    onSelectNode(node.id);
+                    if (onMultiSelectNodes) {
+                      onMultiSelectNodes([node.id]);
+                    }
+                    setMultiDragStart({
+                      initialPositions: [{ id: node.id, x: node.x, y: node.y }],
+                      draggedNodeInitial: { x: node.x, y: node.y },
+                    });
                   }
                   setDraggingNodeId(node.id);
                   if (containerRef.current) {
@@ -2269,9 +2949,22 @@ export const Canvas: React.FC<CanvasProps> = ({
               }}
               onTouchStart={(e) => {
                 e.stopPropagation();
-                onSelectNode(node.id);
-                if (onMultiSelectNodes && !selectedNodeIds.includes(node.id)) {
-                  onMultiSelectNodes([node.id]);
+                if (selectedNodeIds.includes(node.id) && selectedNodeIds.length > 1) {
+                  setMultiDragStart({
+                    initialPositions: nodes
+                      .filter((n) => selectedNodeIds.includes(n.id))
+                      .map((n) => ({ id: n.id, x: n.x, y: n.y })),
+                    draggedNodeInitial: { x: node.x, y: node.y },
+                  });
+                } else {
+                  onSelectNode(node.id);
+                  if (onMultiSelectNodes) {
+                    onMultiSelectNodes([node.id]);
+                  }
+                  setMultiDragStart({
+                    initialPositions: [{ id: node.id, x: node.x, y: node.y }],
+                    draggedNodeInitial: { x: node.x, y: node.y },
+                  });
                 }
                 setDraggingNodeId(node.id);
                 if (containerRef.current && e.touches[0]) {
@@ -2285,7 +2978,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                 }
                 onDragStart?.();
               }}
-              className="z-10 group select-none cursor-pointer"
+              className={`z-10 group select-none ${draggingNodeId === node.id || (selectedNodeIds.includes(node.id) && draggingNodeId) ? 'cursor-grabbing z-30' : 'cursor-grab'}`}
             >
               {/* Sleek Tooltip on Hover */}
               {hoveredNodeId === node.id && !draggingNodeId && !connectingNodeId && (
@@ -2423,10 +3116,15 @@ export const Canvas: React.FC<CanvasProps> = ({
               {/* Main Device Node Box */}
               {(() => {
                 const catStyles = getNodeCategoryClasses(node.type, isSelected);
+                const isDraggingThisNode = draggingNodeId === node.id || (selectedNodeIds.includes(node.id) && draggingNodeId !== null);
                 return (
                   <div
                     className={`relative w-16 h-16 rounded-2xl flex items-center justify-center backdrop-blur-md border-2 transition-all duration-150 ${catStyles.bg} ${
-                      isTargetOfAttack
+                      isDraggingThisNode
+                        ? 'border-amber-400 ring-2 ring-amber-400/80 shadow-[0_0_28px_rgba(245,158,11,0.7)] scale-105 z-30'
+                        : isSelfFocused
+                        ? 'border-cyan-400 ring-4 ring-cyan-400/80 shadow-[0_0_35px_rgba(6,182,212,0.9)] scale-110 z-30'
+                        : isTargetOfAttack
                         ? 'border-rose-500 ring-4 ring-rose-500/70 shadow-[0_0_30px_rgba(239,68,68,0.9)] animate-cyber-glitch scale-105 z-20'
                         : node.isInfected
                         ? 'border-rose-500 ring-4 ring-rose-500/80 shadow-[0_0_35px_rgba(244,63,94,0.95)] animate-infected-pulse scale-105 z-20'
@@ -2441,6 +3139,15 @@ export const Canvas: React.FC<CanvasProps> = ({
                         : catStyles.border
                     }`}
                   >
+                    {/* Focus Mode Node Badge Indicator */}
+                    {isSelfFocused && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-bounce">
+                        <div className="bg-cyan-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-[0_0_15px_rgba(6,182,212,0.8)]">
+                          <Focus className="w-2.5 h-2.5" />
+                          <span>FOKUS</span>
+                        </div>
+                      </div>
+                    )}
                     {/* Warning Icon Badge */}
                     {hasWarning && (
                       <button

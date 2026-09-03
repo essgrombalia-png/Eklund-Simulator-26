@@ -39,7 +39,13 @@ export type DeviceType =
   | 'hacker_pineapple'
   | 'hacker_c2'
   | 'hacker_implant'
-  | 'hacker_stager';
+  | 'hacker_stager'
+  | 'quantum_qkd'
+  | 'ai_cluster'
+  | 'sdwan_edge'
+  | 'scada_rtu'
+  | 'satellite_ground'
+  | 'casb_proxy';
 
 export type DeviceCategory = 'gateway' | 'network' | 'servers' | 'clients' | 'iot' | 'cyber';
 
@@ -335,6 +341,7 @@ export interface IncidentLog {
 // THEMES & CUSTOMIZATION
 // ----------------------------------------------------
 export type SimulatorThemeId =
+  | 'vintage_terminal'
   | 'cyber_matrix'
   | 'midnight_obsidian'
   | 'clean_enterprise'
