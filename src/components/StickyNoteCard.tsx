@@ -10,6 +10,8 @@ import {
   Plus,
   Minus,
   Maximize2,
+  SlidersHorizontal,
+  Eye,
 } from 'lucide-react';
 import { StickyNote, StickyNoteColor } from '../types';
 
@@ -141,6 +143,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [titleInput, setTitleInput] = useState(note.title || 'Anteckning');
   const [textInput, setTextInput] = useState(note.text || '');
   const [isResizing, setIsResizing] = useState(false);
@@ -175,6 +178,16 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
 
   const currentWidth = liveDimensions?.width ?? (note.width || 240);
   const currentHeight = liveDimensions?.height ?? (note.height || 180);
+  const currentOpacity = typeof note.opacity === 'number' ? note.opacity : 1;
+
+  const handleSetOpacity = (opacity: number) => {
+    const clamped = Math.max(0.15, Math.min(1, Math.round(opacity * 100) / 100));
+    onUpdate({
+      ...note,
+      opacity: clamped,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
 
   const handleTitleBlur = () => {
     setIsEditingTitle(false);
@@ -334,6 +347,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         top: note.y,
         width: currentWidth,
         height: currentHeight,
+        opacity: currentOpacity,
       }}
       className={`group rounded-2xl border ${theme.cardBg} ${theme.shadow} ${
         isResizing ? 'ring-2 ring-cyan-400 shadow-2xl scale-[1.01]' : ''
@@ -386,12 +400,44 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
 
         {/* Note Controls */}
         <div className="flex items-center gap-1 shrink-0" onMouseDown={(e) => e.stopPropagation()}>
+          {/* Settings / Opacity Menu Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowSettings(!showSettings);
+              setShowSizePicker(false);
+              setShowColorPicker(false);
+            }}
+            title="Inställningsmeny (Opacitet & Transparens)"
+            className={`p-1 rounded-md transition flex items-center gap-0.5 cursor-pointer ${
+              showSettings
+                ? isYellow
+                  ? 'bg-amber-400 text-amber-950 font-bold'
+                  : 'bg-cyan-500/40 text-white'
+                : currentOpacity < 0.95
+                ? isYellow
+                  ? 'bg-amber-400/80 text-amber-950 font-bold ring-1 ring-amber-600/60'
+                  : 'bg-cyan-500/30 text-cyan-200 ring-1 ring-cyan-400/60'
+                : isYellow
+                ? 'hover:bg-amber-400/90 text-amber-950'
+                : 'hover:bg-white/10 text-slate-300 hover:text-white'
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            {currentOpacity < 0.95 && (
+              <span className="text-[8.5px] font-mono font-bold leading-none pr-0.5">
+                {Math.round(currentOpacity * 100)}%
+              </span>
+            )}
+          </button>
+
           {/* Quick Zoom / Size Control Button */}
           <button
             type="button"
             onClick={() => {
               setShowSizePicker(!showSizePicker);
               setShowColorPicker(false);
+              setShowSettings(false);
             }}
             title="Ändra storlek på Post-it (Mindre/Större, S, M, L, XL)"
             className={`p-1 rounded-md transition ${
@@ -413,6 +459,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             onClick={() => {
               setShowColorPicker(!showColorPicker);
               setShowSizePicker(false);
+              setShowSettings(false);
             }}
             title="Ändra färg på Post-it"
             className={`p-1 rounded-md transition ${
@@ -461,6 +508,112 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Settings & Opacity Drawer */}
+      {showSettings && (
+        <div
+          className="p-2.5 border-b border-current/20 bg-black/35 backdrop-blur-md flex flex-col gap-2 animate-fade-in text-[10px]"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {/* Header of settings drawer */}
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="font-mono font-bold opacity-80 flex items-center gap-1 text-[10.5px]">
+              <Eye className="w-3 h-3" /> Opacitet & Transparens:
+            </span>
+            <span
+              className={`font-mono font-extrabold px-1.5 py-0.5 rounded text-[10px] ${
+                isYellow
+                  ? 'bg-amber-400 text-amber-950 shadow-sm'
+                  : 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/40'
+              }`}
+            >
+              {Math.round(currentOpacity * 100)}%{' '}
+              {currentOpacity < 0.95 ? '(Halvtransparent)' : '(Solid)'}
+            </span>
+          </div>
+
+          {/* Opacity Range Slider */}
+          <div className="flex items-center gap-2 pt-0.5">
+            <span className="font-mono opacity-60 text-[9px] shrink-0">20%</span>
+            <input
+              type="range"
+              min="20"
+              max="100"
+              step="5"
+              value={Math.round(currentOpacity * 100)}
+              onChange={(e) => handleSetOpacity(Number(e.target.value) / 100)}
+              className="w-full h-1.5 bg-white/25 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              title={`Dra för att justera transparens (${Math.round(currentOpacity * 100)}%)`}
+            />
+            <span className="font-mono opacity-60 text-[9px] shrink-0">100%</span>
+          </div>
+
+          {/* Quick Preset Buttons */}
+          <div className="flex items-center justify-between gap-1 pt-1 border-t border-current/15">
+            <span className="font-mono text-[9px] opacity-75">Snabbval:</span>
+            <div className="flex items-center gap-1">
+              {[
+                { label: '100%', value: 1.0, name: 'Solid' },
+                { label: '75%', value: 0.75, name: 'Lätt transparent' },
+                { label: '50%', value: 0.5, name: 'Halvtransparent' },
+                { label: '30%', value: 0.3, name: 'Mycket transparent' },
+              ].map((preset) => {
+                const isSelected = Math.abs(currentOpacity - preset.value) < 0.04;
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => handleSetOpacity(preset.value)}
+                    title={`${preset.name} (${preset.label})`}
+                    className={`px-1.5 py-0.5 rounded font-mono font-bold text-[9px] transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-white text-slate-950 shadow-sm scale-105'
+                        : isYellow
+                        ? 'bg-amber-400/60 hover:bg-amber-400 text-amber-950'
+                        : 'bg-white/10 hover:bg-white/25 text-white'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 1-Click Action Toggle: Gör Halvtransparent / Solid */}
+          <button
+            type="button"
+            onClick={() => {
+              if (currentOpacity > 0.65) {
+                handleSetOpacity(0.5);
+              } else {
+                handleSetOpacity(1.0);
+              }
+            }}
+            className={`w-full py-1.5 px-2 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm active:scale-98 ${
+              currentOpacity <= 0.65
+                ? isYellow
+                  ? 'bg-amber-900/80 hover:bg-amber-900 text-amber-100'
+                  : 'bg-slate-800 hover:bg-slate-700 text-stone-100 border border-slate-600'
+                : isYellow
+                ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 shadow-amber-400/30'
+                : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/30'
+            }`}
+          >
+            {currentOpacity <= 0.65 ? (
+              <>
+                <Eye className="w-3.5 h-3.5" />
+                <span>Återställ till Solid (100% ogenomskinlig)</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5 opacity-80" />
+                <span>⚡ Gör Halvtransparent (50% transparens)</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Size Adjuster Drawer */}
       {showSizePicker && (

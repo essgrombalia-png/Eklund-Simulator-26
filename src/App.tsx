@@ -191,6 +191,7 @@ export default function App() {
       color: color || 'yellow',
       width: 240,
       height: 180,
+      opacity: 1,
       updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     updateTopology({ stickyNotes: (prev) => [...prev, newNote] }, 'Lade till digital Post-it');

@@ -248,6 +248,7 @@ export interface StickyNote {
   color: StickyNoteColor;
   width?: number;
   height?: number;
+  opacity?: number;
   isPinned?: boolean;
   author?: string;
   updatedAt?: string;
