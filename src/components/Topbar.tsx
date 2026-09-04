@@ -31,6 +31,7 @@ import {
   Layers,
   Search,
   X,
+  Waves,
 } from 'lucide-react';
 import { ScenarioPreset, UserProfile, SimulatorThemeId, Device } from '../types';
 import { SCENARIOS } from '../data/scenarios';
@@ -82,6 +83,9 @@ interface TopbarProps {
   onLogout?: () => void;
   nodes?: Device[];
   onSelectNode?: (nodeId: string) => void;
+  backgroundNoiseEnabled?: boolean;
+  onToggleBackgroundNoise?: () => void;
+  noisePacketsCount?: number;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -126,6 +130,9 @@ export const Topbar: React.FC<TopbarProps> = ({
   onLogout,
   nodes = [],
   onSelectNode,
+  backgroundNoiseEnabled = false,
+  onToggleBackgroundNoise,
+  noisePacketsCount = 0,
 }) => {
   const activeTheme = SIMULATOR_THEMES[currentThemeId] || SIMULATOR_THEMES.cyber_matrix;
 
@@ -256,6 +263,21 @@ export const Topbar: React.FC<TopbarProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             {onlineCount} online
           </span>
+          {backgroundNoiseEnabled && (
+            <>
+              <span className="text-stone-700">·</span>
+              <button
+                type="button"
+                onClick={onToggleBackgroundNoise}
+                title="Bakgrunds-brus simulering är aktiv (genererar slumpmässiga lågprioriterade nätverkspaket). Klicka för att stänga av/på."
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 transition cursor-pointer"
+              >
+                <Waves className="w-3 h-3 text-sky-400 animate-pulse" />
+                <span className="hidden md:inline">Brus:</span>
+                <span>{noisePacketsCount || 0} pkt</span>
+              </button>
+            </>
+          )}
           {lastAutoSavedTime && (
             <>
               <span className="text-stone-700">·</span>
@@ -827,6 +849,44 @@ export const Topbar: React.FC<TopbarProps> = ({
                       <span className="text-[10px] text-slate-400">IP & subnät-etiketter på canvas</span>
                     </div>
                   </button>
+
+                  {onToggleBackgroundNoise && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolsMenuOpen(false);
+                        onToggleBackgroundNoise();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-sky-950/40 hover:text-sky-300 transition group cursor-pointer"
+                    >
+                      <div className={`p-1.5 rounded-lg border ${
+                        backgroundNoiseEnabled
+                          ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                      }`}>
+                        <Waves className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-semibold flex items-center justify-between">
+                          <span>Bakgrunds-brus (Noise)</span>
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                              backgroundNoiseEnabled
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-slate-800 text-slate-500'
+                            }`}
+                          >
+                            {backgroundNoiseEnabled ? 'PÅ' : 'AV'}
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {backgroundNoiseEnabled
+                            ? `Aktivt (${noisePacketsCount || 0} genererade paket)`
+                            : 'Slumpmässiga lågprio-paket'}
+                        </span>
+                      </div>
+                    </button>
+                  )}
 
                   <button
                     type="button"

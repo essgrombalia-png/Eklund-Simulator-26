@@ -40,7 +40,9 @@ import {
   AdvancedSettings,
   UserProfile,
   SimulatorThemeId,
+  ActivePacketAnimation,
 } from './types';
+import { generateBackgroundNoisePacket } from './utils/backgroundNoiseEngine';
 import {
   loadSavedSettings,
   saveSettingsToStorage,
@@ -469,6 +471,82 @@ export default function App() {
 
   // Captured packets sniffer state
   const [capturedPackets, setCapturedPackets] = useState<CapturedPacket[]>([]);
+
+  // Active traveling packet animations along links (background noise & traffic pulses)
+  const [activePacketAnimations, setActivePacketAnimations] = useState<ActivePacketAnimation[]>([]);
+  const [noisePacketsCount, setNoisePacketsCount] = useState<number>(0);
+
+  // Background Network Noise Simulation Engine
+  // Periodically generates low-priority benign packets between connected topology nodes
+  useEffect(() => {
+    if (!settings.backgroundNoiseEnabled || nodes.length < 2 || links.length === 0) {
+      return;
+    }
+
+    let baseIntervalMs = 2500;
+    if (settings.backgroundNoiseIntensity === 'low') {
+      baseIntervalMs = 4500;
+    } else if (settings.backgroundNoiseIntensity === 'high') {
+      baseIntervalMs = 1200;
+    }
+
+    let isCancelled = false;
+    let timerId: NodeJS.Timeout | null = null;
+
+    const scheduleNextNoise = () => {
+      if (isCancelled) return;
+
+      // Jitter +/- 25% to make background traffic organic and natural
+      const jitter = (Math.random() - 0.5) * (baseIntervalMs * 0.5);
+      const delay = Math.max(500, baseIntervalMs + jitter);
+
+      timerId = setTimeout(() => {
+        if (isCancelled) return;
+
+        const noiseResult = generateBackgroundNoisePacket(nodes, links);
+        if (noiseResult) {
+          // Add to captured packets (keep buffer capped at 200 for peak UI performance)
+          setCapturedPackets((prev) => [noiseResult.packet, ...prev.slice(0, 199)]);
+          setNoisePacketsCount((prev) => prev + 1);
+
+          // If cable particle animations are enabled, trigger visual packet pulses
+          if (settings.backgroundNoiseVisualPackets && noiseResult.linkIds.length > 0) {
+            const animId = `noise_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+            const newAnims: ActivePacketAnimation[] = noiseResult.linkIds.map((lId) => ({
+              id: `${animId}_${lId}`,
+              linkId: lId,
+              color: noiseResult.color,
+              duration: noiseResult.duration,
+            }));
+
+            setActivePacketAnimations((prev) => [...prev, ...newAnims]);
+
+            // Clear active animations after animation duration
+            setTimeout(() => {
+              setActivePacketAnimations((prev) =>
+                prev.filter((a) => !newAnims.some((na) => na.id === a.id))
+              );
+            }, (noiseResult.duration * 1000) + 120);
+          }
+        }
+
+        scheduleNextNoise();
+      }, delay);
+    };
+
+    scheduleNextNoise();
+
+    return () => {
+      isCancelled = true;
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [
+    settings.backgroundNoiseEnabled,
+    settings.backgroundNoiseIntensity,
+    settings.backgroundNoiseVisualPackets,
+    nodes,
+    links,
+  ]);
 
   // Realtime diagnosed issues
   const detectedIssues = useMemo(() => {
@@ -1432,6 +1510,14 @@ export default function App() {
         onSelectTheme={(themeId) => handleUpdateSettings({ ...settings, themeId })}
         onLogout={handleLogout}
         nodes={nodes}
+        backgroundNoiseEnabled={settings.backgroundNoiseEnabled}
+        onToggleBackgroundNoise={() =>
+          handleUpdateSettings({
+            ...settings,
+            backgroundNoiseEnabled: !settings.backgroundNoiseEnabled,
+          })
+        }
+        noisePacketsCount={noisePacketsCount}
         onSelectNode={(id) => {
           setSelectedNodeId(id);
           setSelectedNodeIds(id ? [id] : []);
@@ -1518,7 +1604,7 @@ export default function App() {
               selectedContainerId={selectedContainerId}
               connectivityMap={connectivityMap}
               testingLinkIds={testingLinkIds}
-              activePacketAnimations={[]}
+              activePacketAnimations={activePacketAnimations}
               showVisualDebugger={showVisualDebugger}
               onToggleVisualDebugger={() => setShowVisualDebugger((prev) => !prev)}
               onSelectNode={(id) => {
@@ -1988,6 +2074,7 @@ export default function App() {
         userProfile={userProfile}
         onUpdateProfile={handleUpdateProfile}
         currentUserEmail={currentUser?.email}
+        noisePacketsCount={noisePacketsCount}
         onResetAllSettings={() => {
           handleUpdateSettings(loadSavedSettings());
         }}

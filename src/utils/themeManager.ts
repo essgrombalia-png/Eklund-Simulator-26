@@ -224,6 +224,10 @@ export const DEFAULT_ADVANCED_SETTINGS: AdvancedSettings = {
   showVisualDebugger: false,
   cableAnimationGlow: true,
 
+  backgroundNoiseEnabled: false,
+  backgroundNoiseIntensity: 'medium',
+  backgroundNoiseVisualPackets: true,
+
   defaultGateway: '192.168.1.1',
   defaultSubnetMask: '255.255.255.0',
   defaultDnsServer: '8.8.8.8',

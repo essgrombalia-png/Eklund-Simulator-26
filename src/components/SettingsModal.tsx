@@ -30,6 +30,7 @@ import {
   Sun,
   Moon,
   Presentation,
+  Waves,
 } from 'lucide-react';
 import {
   AdvancedSettings,
@@ -58,6 +59,7 @@ interface SettingsModalProps {
   currentUserEmail?: string;
   onResetAllSettings?: () => void;
   lastAutoSavedTime?: string | null;
+  noisePacketsCount?: number;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -71,6 +73,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   currentUserEmail,
   onResetAllSettings,
   lastAutoSavedTime,
+  noisePacketsCount = 0,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'theme' | 'profile' | 'simulation' | 'network' | 'security' | 'data'
@@ -873,6 +876,100 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Network Background Noise Simulation Section */}
+              <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-4 relative overflow-hidden">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className={`p-2 rounded-lg ${localSettings.backgroundNoiseEnabled ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-slate-900 text-slate-500 border border-slate-800'}`}>
+                      <Waves className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                          Bakgrunds-brus i Nätverket (Background Noise)
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                          localSettings.backgroundNoiseEnabled
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {localSettings.backgroundNoiseEnabled ? 'Aktiv' : 'Avstängd'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed max-w-xl">
+                        Simulerar realistiskt nätverksbrus genom att generera slumpmässiga paket av låg prioritet (ARP cache, ICMP heartbeats, DNS-frågor, NTP-synk, mDNS och TCP keepalive) mellan anslutna enheter för att göra simuleringen levande.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={localSettings.backgroundNoiseEnabled}
+                      onChange={(e) => handleSettingChange('backgroundNoiseEnabled', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500"></div>
+                  </label>
+                </div>
+
+                {localSettings.backgroundNoiseEnabled && (
+                  <div className="space-y-3 pt-3 border-t border-slate-900 animate-in fade-in duration-200">
+                    {/* Frequency / Intensity Controls */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2 text-xs">
+                        <span className="text-slate-300 font-semibold">Trafikintensitet & Frekvens</span>
+                        <span className="font-mono text-sky-400 text-[11px]">
+                          {localSettings.backgroundNoiseIntensity === 'low' && 'Låg frekvens (~4.5s intervall)'}
+                          {localSettings.backgroundNoiseIntensity === 'medium' && 'Medel frekvens (~2.5s intervall)'}
+                          {localSettings.backgroundNoiseIntensity === 'high' && 'Hög frekvens (~1.2s intervall)'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'low', label: 'Låg (Lugnt)', desc: 'Diskret bakgrundsaktivitet (~4.5s)' },
+                          { id: 'medium', label: 'Medel (Standard)', desc: 'Autentiskt kontorsnätverk (~2.5s)' },
+                          { id: 'high', label: 'Hög (Aktivt)', desc: 'Datacenter / Tät telemetri (~1.2s)' },
+                        ].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleSettingChange('backgroundNoiseIntensity', item.id as any)}
+                            className={`p-2 rounded-xl text-left transition border cursor-pointer ${
+                              localSettings.backgroundNoiseIntensity === item.id
+                                ? 'bg-sky-500/20 text-sky-200 border-sky-400 shadow-sm'
+                                : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="text-xs font-bold">{item.label}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">{item.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Visual Pulses Checkbox */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-900/80">
+                      <label className="flex items-center gap-2.5 text-slate-300 cursor-pointer text-xs">
+                        <input
+                          type="checkbox"
+                          checked={localSettings.backgroundNoiseVisualPackets}
+                          onChange={(e) => handleSettingChange('backgroundNoiseVisualPackets', e.target.checked)}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-sky-500"
+                        />
+                        <span>Visa diskreta ljuspulser (paketpartiklar) på kablarna vid bakgrundsbrus</span>
+                      </label>
+
+                      {/* Live Counter Badge */}
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 shrink-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                        <span>Genererade brus-paket: <strong>{noisePacketsCount}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Canvas Visual Overlays */}

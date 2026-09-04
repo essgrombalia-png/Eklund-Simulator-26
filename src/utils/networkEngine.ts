@@ -51,7 +51,7 @@ export function evaluateFirewall(
   device: Device,
   sourceIp: string,
   destIp: string,
-  protocol: 'ICMP' | 'HTTP' | 'DNS' | 'TCP' | 'UDP' | 'ALL' | 'MALWARE',
+  protocol: 'ICMP' | 'HTTP' | 'DNS' | 'TCP' | 'UDP' | 'ALL' | 'MALWARE' | 'ARP',
   port?: number
 ): { allowed: boolean; ruleId?: string; reason?: string } {
   if (!device.firewallRules || device.firewallRules.length === 0) {
@@ -141,7 +141,7 @@ export function findPathAndSimulate(
   toId: string,
   nodes: Device[],
   links: Link[],
-  protocol: 'ICMP' | 'HTTP' | 'DNS' | 'TCP' | 'UDP' | 'MALWARE' = 'ICMP',
+  protocol: 'ICMP' | 'HTTP' | 'DNS' | 'TCP' | 'UDP' | 'MALWARE' | 'ARP' = 'ICMP',
   port?: number
 ): TestResult {
   const logs: string[] = [];

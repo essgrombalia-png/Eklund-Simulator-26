@@ -196,6 +196,15 @@ export interface CapturedPacket {
   payload?: string;
   ttl: number;
   hopsCount: number;
+  priority?: 'low' | 'normal' | 'high';
+  isNoise?: boolean;
+}
+
+export interface ActivePacketAnimation {
+  id: string;
+  linkId: string;
+  color: string;
+  duration: number;
 }
 
 export type ContainerType =
@@ -411,6 +420,11 @@ export interface AdvancedSettings {
   showMinimap: 'always' | 'collapsed' | 'hidden';
   showVisualDebugger: boolean;
   cableAnimationGlow: boolean;
+
+  // Background Noise Simulation (Bakgrunds-brus)
+  backgroundNoiseEnabled: boolean;
+  backgroundNoiseIntensity: 'low' | 'medium' | 'high';
+  backgroundNoiseVisualPackets: boolean;
 
   // Network Defaults
   defaultGateway: string;

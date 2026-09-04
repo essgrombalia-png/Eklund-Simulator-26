@@ -50,6 +50,7 @@ import {
   CapturedPacket,
   SimulatorThemeId,
   StickyNote,
+  ActivePacketAnimation,
 } from '../types';
 import { detectNodeWarnings } from '../utils/networkEngine';
 import { CABLE_DEFINITIONS } from '../utils/cableEngine';
@@ -75,7 +76,7 @@ interface CanvasProps {
   selectedContainerId?: string | null;
   connectivityMap: Map<string, boolean>;
   testingLinkIds: string[];
-  activePacketAnimations: { linkId: string; color: string; duration: number }[];
+  activePacketAnimations: ActivePacketAnimation[];
   showVisualDebugger?: boolean;
   onToggleVisualDebugger?: () => void;
   onSelectNode: (id: string | null) => void;
@@ -2158,6 +2159,41 @@ export const Canvas: React.FC<CanvasProps> = ({
                     />
                   </circle>
                 )}
+
+                {/* Real-time Dynamic Transient Packet Bursts & Background Noise Pulses */}
+                {isUp &&
+                  activePacketAnimations
+                    .filter((anim) => anim.linkId === link.id)
+                    .map((anim, animIdx) => (
+                      <g key={`anim-pkt-${link.id}-${anim.id || animIdx}`} className="pointer-events-none">
+                        {/* Outer Glow Particle */}
+                        <circle
+                          r={5.5}
+                          fill={anim.color || '#38bdf8'}
+                          filter="url(#glow-cyan)"
+                          opacity="0.9"
+                          className="animate-pulse"
+                        >
+                          <animateMotion
+                            path={pathD}
+                            dur={`${anim.duration || 1.2}s`}
+                            repeatCount="indefinite"
+                          />
+                        </circle>
+                        {/* High-intensity Bright White Core */}
+                        <circle
+                          r={2.5}
+                          fill="#ffffff"
+                          opacity="0.95"
+                        >
+                          <animateMotion
+                            path={pathD}
+                            dur={`${anim.duration || 1.2}s`}
+                            repeatCount="indefinite"
+                          />
+                        </circle>
+                      </g>
+                    ))}
 
                 {/* Real-time Infection Spreading Visual Line & Particle Effects */}
                 {isUp && (nodeA?.isInfected || nodeB?.isInfected) && (

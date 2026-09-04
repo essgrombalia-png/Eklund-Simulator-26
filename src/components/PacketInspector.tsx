@@ -278,6 +278,9 @@ export const PacketInspector: React.FC<PacketInspectorProps> = ({
   };
 
   const filteredPackets = packets.filter((p) => {
+    if (protocolFilter === 'NOISE') {
+      return p.isNoise === true;
+    }
     if (protocolFilter !== 'ALL' && p.protocol !== protocolFilter) return false;
     return true;
   });
@@ -676,6 +679,8 @@ export const PacketInspector: React.FC<PacketInspectorProps> = ({
                 <option value="HTTP">HTTP Web</option>
                 <option value="DNS">DNS</option>
                 <option value="TCP">TCP Syn/Ack</option>
+                <option value="ARP">ARP Resolution</option>
+                <option value="NOISE">Bakgrundsbrus (Noise)</option>
                 <option value="MALWARE">Malware Threat</option>
               </select>
             </>
@@ -767,21 +772,33 @@ export const PacketInspector: React.FC<PacketInspectorProps> = ({
                           </span>
                         </td>
                         <td className="p-2.5 font-sans">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              pkt.protocol === 'ICMP'
-                                ? 'bg-blue-500/20 text-blue-300'
-                                : pkt.protocol === 'HTTP'
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : pkt.protocol === 'DNS'
-                                ? 'bg-purple-500/20 text-purple-300'
-                                : pkt.protocol === 'MALWARE'
-                                ? 'bg-rose-500/20 text-rose-300 animate-pulse'
-                                : 'bg-slate-800 text-slate-300'
-                            }`}
-                          >
-                            {pkt.protocol}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                pkt.protocol === 'ICMP'
+                                  ? 'bg-blue-500/20 text-blue-300'
+                                  : pkt.protocol === 'HTTP'
+                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  : pkt.protocol === 'DNS'
+                                  ? 'bg-purple-500/20 text-purple-300'
+                                  : pkt.protocol === 'ARP'
+                                  ? 'bg-amber-500/20 text-amber-300'
+                                  : pkt.protocol === 'MALWARE'
+                                  ? 'bg-rose-500/20 text-rose-300 animate-pulse'
+                                  : 'bg-slate-800 text-slate-300'
+                              }`}
+                            >
+                              {pkt.protocol}
+                            </span>
+                            {pkt.isNoise && (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/30"
+                                title="Bakgrunds-brus (Låg prioritet)"
+                              >
+                                BRUS
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-2.5 font-sans">
                           {pkt.status === 'SUCCESS' ? (
@@ -1949,6 +1966,38 @@ export const PacketInspector: React.FC<PacketInspectorProps> = ({
                 <span className="text-cyan-400">
                   Version 4, TTL {selectedPacket.ttl}, Protocol {selectedPacket.protocol}
                 </span>
+              </div>
+
+              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                <span className="text-slate-500 font-sans block text-[10px]">QOS & TRAFIKTYP</span>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-slate-300 font-sans text-[11px]">Prioritet:</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                      selectedPacket.priority === 'low'
+                        ? 'bg-sky-500/20 text-sky-300'
+                        : selectedPacket.priority === 'high'
+                        ? 'bg-rose-500/20 text-rose-300'
+                        : 'bg-emerald-500/20 text-emerald-300'
+                    }`}
+                  >
+                    {selectedPacket.priority === 'low'
+                      ? 'LÅG (0x01)'
+                      : selectedPacket.priority === 'high'
+                      ? 'HÖG (0x05)'
+                      : 'NORMAL (0x00)'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-900">
+                  <span className="text-slate-300 font-sans text-[11px]">Bakgrunds-brus:</span>
+                  <span
+                    className={`text-[10px] font-sans font-medium ${
+                      selectedPacket.isNoise ? 'text-sky-300' : 'text-slate-400'
+                    }`}
+                  >
+                    {selectedPacket.isNoise ? 'Ja (Simulerat brus)' : 'Nej (Applikation)'}
+                  </span>
+                </div>
               </div>
 
               <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
