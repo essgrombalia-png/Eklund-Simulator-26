@@ -248,6 +248,27 @@ export type StickyNoteColor =
   | 'purple'
   | 'blue';
 
+export type StickyNoteFontFamily =
+  | 'sans'
+  | 'mono'
+  | 'handwriting'
+  | 'space'
+  | 'cyber'
+  | 'serif';
+
+export type StickyNoteFontWeight = 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold';
+export type StickyNoteFontStyle = 'normal' | 'italic';
+export type StickyNoteTextAlign = 'left' | 'center' | 'right';
+export type StickyNoteTextDecoration = 'none' | 'underline' | 'line-through';
+export type StickyNoteLineHeight = 'tight' | 'normal' | 'relaxed';
+export type StickyNoteMode = 'text' | 'todo';
+
+export interface StickyNoteTodoItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface StickyNote {
   id: string;
   title: string;
@@ -261,6 +282,25 @@ export interface StickyNote {
   isPinned?: boolean;
   author?: string;
   updatedAt?: string;
+
+  // Grouping Support
+  groupId?: string;
+  groupName?: string;
+
+  // Mode: Text anteckning vs Att-göra-lista (Checklista)
+  mode?: StickyNoteMode; // 'text' | 'todo'
+  todos?: StickyNoteTodoItem[];
+
+  // Typography & Font Configuration
+  fontSize?: number; // Text font size in pixels (e.g. 9 to 36, default 13)
+  titleFontSize?: number; // Title font size in pixels (e.g. 10 to 24, default 12)
+  fontFamily?: StickyNoteFontFamily; // sans, mono, handwriting, space, cyber, serif
+  fontWeight?: StickyNoteFontWeight; // normal, medium, semibold, bold, extrabold
+  fontStyle?: StickyNoteFontStyle; // normal, italic
+  textAlign?: StickyNoteTextAlign; // left, center, right
+  textDecoration?: StickyNoteTextDecoration; // none, underline, line-through
+  lineHeight?: StickyNoteLineHeight; // tight, normal, relaxed
+  textColorCustom?: string; // Optional custom text color hex
 }
 
 export interface ScenarioPreset {

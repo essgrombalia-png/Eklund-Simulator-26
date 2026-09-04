@@ -51,8 +51,21 @@ import {
   VolumeX,
   Video,
   Sun,
+  StickyNote as StickyNoteIcon,
+  Boxes,
+  FolderPlus,
+  FolderMinus,
+  Move,
+  CheckSquare,
+  ListTodo,
+  Palette,
+  Type,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Grid,
 } from 'lucide-react';
-import { Device, Link, FirewallRule, DnsRecord, CableType, NetworkContainer, IotRule, IotRuleTrigger, IotRuleAction } from '../types';
+import { Device, Link, FirewallRule, DnsRecord, CableType, NetworkContainer, IotRule, IotRuleTrigger, IotRuleAction, StickyNote, StickyNoteColor } from '../types';
 import { detectNodeWarnings } from '../utils/networkEngine';
 import {
   CABLE_DEFINITIONS,
@@ -75,6 +88,9 @@ interface InspectorProps {
   selectedNode: Device | null;
   selectedLink: Link | null;
   selectedContainer?: NetworkContainer | null;
+  selectedStickyNote?: StickyNote | null;
+  selectedStickyNotes?: StickyNote[];
+  stickyNotes?: StickyNote[];
   containers?: NetworkContainer[];
   nodes: Device[];
   links?: Link[];
@@ -91,12 +107,21 @@ interface InspectorProps {
   onOpenContainerModal?: (c?: NetworkContainer | null, initialNodeIds?: string[]) => void;
   onUpdateContainer?: (c: NetworkContainer) => void;
   onDeleteContainer?: (id: string) => void;
+  onUpdateStickyNote?: (note: StickyNote) => void;
+  onUpdateMultipleStickyNotes?: (notes: StickyNote[]) => void;
+  onDeleteStickyNote?: (id: string) => void;
+  onGroupStickyNotes?: (noteIds: string[], groupName?: string) => void;
+  onUngroupStickyNotes?: (groupIdOrNoteIds: string | string[]) => void;
+  onSelectMultipleStickyNotes?: (ids: string[]) => void;
 }
 
 export const Inspector: React.FC<InspectorProps> = ({
   selectedNode,
   selectedLink,
   selectedContainer,
+  selectedStickyNote,
+  selectedStickyNotes = [],
+  stickyNotes = [],
   containers = [],
   nodes,
   links = [],
@@ -113,6 +138,12 @@ export const Inspector: React.FC<InspectorProps> = ({
   onOpenContainerModal,
   onUpdateContainer,
   onDeleteContainer,
+  onUpdateStickyNote,
+  onUpdateMultipleStickyNotes,
+  onDeleteStickyNote,
+  onGroupStickyNotes,
+  onUngroupStickyNotes,
+  onSelectMultipleStickyNotes,
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [quickConnectTargetId, setQuickConnectTargetId] = useState<string>('');
@@ -136,7 +167,17 @@ export const Inspector: React.FC<InspectorProps> = ({
   const [newRuleAction, setNewRuleAction] = useState<IotRuleAction>('turn_off');
   const [newRuleCustomName, setNewRuleCustomName] = useState<string>('');
 
-  if (!selectedNode && !selectedLink && !selectedContainer) return null;
+  const [groupNameInput, setGroupNameInput] = useState<string>('');
+
+  if (
+    !selectedNode &&
+    !selectedLink &&
+    !selectedContainer &&
+    !selectedStickyNote &&
+    (!selectedStickyNotes || selectedStickyNotes.length === 0)
+  ) {
+    return null;
+  }
 
   // Auto-generate next available IP in 192.168.1.x subnet
   const handleAutoDhcp = (node: Device) => {
@@ -210,7 +251,15 @@ export const Inspector: React.FC<InspectorProps> = ({
         <div className="flex items-center gap-2">
           <Sliders className="w-4 h-4 text-amber-400" />
           <h2 className="text-sm font-bold text-stone-100 font-sans uppercase tracking-wider">
-            {selectedNode ? 'Enhetskonfiguration' : 'Kabelkonfiguration'}
+            {selectedNode
+              ? 'Enhetskonfiguration'
+              : selectedLink
+              ? 'Kabelkonfiguration'
+              : selectedContainer
+              ? 'Container-konfiguration'
+              : selectedStickyNotes && selectedStickyNotes.length > 1
+              ? 'Post-it Gruppering'
+              : 'Post-it Inspektering'}
           </h2>
         </div>
         <button
@@ -2791,6 +2840,464 @@ export const Inspector: React.FC<InspectorProps> = ({
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>Upplös / Ta bort Container</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Dedicated Sticky Note & Sticky Note Group Inspector */}
+        {!selectedNode && !selectedLink && !selectedContainer && (selectedStickyNote || (selectedStickyNotes && selectedStickyNotes.length > 0)) && (() => {
+          const activeNotes =
+            selectedStickyNotes && selectedStickyNotes.length > 0
+              ? selectedStickyNotes
+              : selectedStickyNote
+              ? [selectedStickyNote]
+              : [];
+
+          if (activeNotes.length === 0) return null;
+
+          const isMultiple = activeNotes.length > 1;
+          const firstGroupId = activeNotes[0].groupId;
+          const allSameGroup = isMultiple && !!firstGroupId && activeNotes.every((n) => n.groupId === firstGroupId);
+          const currentGroupName = activeNotes[0].groupName || 'Post-it-grupp';
+
+          // Alignment helper
+          const handleAlign = (mode: 'top' | 'left' | 'row' | 'column' | 'grid') => {
+            if (activeNotes.length < 2 || !onUpdateMultipleStickyNotes) return;
+            const minX = Math.min(...activeNotes.map((n) => n.x));
+            const minY = Math.min(...activeNotes.map((n) => n.y));
+
+            const updated = activeNotes.map((n, idx) => {
+              const w = n.width || 240;
+              const h = n.height || 180;
+              const spacing = 20;
+
+              if (mode === 'top') {
+                return { ...n, y: minY };
+              } else if (mode === 'left') {
+                return { ...n, x: minX };
+              } else if (mode === 'row') {
+                return { ...n, x: minX + idx * (w + spacing), y: minY };
+              } else if (mode === 'column') {
+                return { ...n, x: minX, y: minY + idx * (h + spacing) };
+              } else if (mode === 'grid') {
+                const cols = 2;
+                const row = Math.floor(idx / cols);
+                const col = idx % cols;
+                return {
+                  ...n,
+                  x: minX + col * (w + spacing),
+                  y: minY + row * (h + spacing),
+                };
+              }
+              return n;
+            });
+
+            onUpdateMultipleStickyNotes(updated);
+          };
+
+          // Batch change color
+          const handleBatchColor = (color: StickyNoteColor) => {
+            if (onUpdateMultipleStickyNotes) {
+              onUpdateMultipleStickyNotes(activeNotes.map((n) => ({ ...n, color })));
+            } else if (onUpdateStickyNote) {
+              activeNotes.forEach((n) => onUpdateStickyNote({ ...n, color }));
+            }
+          };
+
+          // Batch change mode
+          const handleBatchMode = (mode: 'text' | 'todo') => {
+            if (onUpdateMultipleStickyNotes) {
+              onUpdateMultipleStickyNotes(
+                activeNotes.map((n) => {
+                  if (mode === 'todo' && n.mode !== 'todo') {
+                    const todos = (n.text || '')
+                      .split('\n')
+                      .map((l) => l.trim())
+                      .filter(Boolean)
+                      .map((line, idx) => ({
+                        id: `todo-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+                        text: line.replace(/^(\[[ xX]\]|\- \[[ xX]\]|•|\-|\*)\s*/, '').trim() || line,
+                        completed: /^(\[x\]|☑|✔️|✅)/i.test(line),
+                      }));
+                    return { ...n, mode: 'todo', todos: todos.length > 0 ? todos : [{ id: `todo-${Date.now()}-1`, text: 'Ny uppgift', completed: false }] };
+                  } else if (mode === 'text' && n.mode === 'todo') {
+                    const text = (n.todos || []).map((t) => `${t.completed ? '[x]' : '[ ]'} ${t.text}`).join('\n');
+                    return { ...n, mode: 'text', text };
+                  }
+                  return n;
+                })
+              );
+            }
+          };
+
+          const colorOptions: Array<{ id: StickyNoteColor; label: string; bg: string }> = [
+            { id: 'yellow', label: 'Gul', bg: 'bg-amber-300 border-amber-400 text-amber-950' },
+            { id: 'cyan', label: 'Cyan', bg: 'bg-cyan-500 border-cyan-400 text-slate-950' },
+            { id: 'emerald', label: 'Grön', bg: 'bg-emerald-500 border-emerald-400 text-slate-950' },
+            { id: 'rose', label: 'Rosa', bg: 'bg-rose-500 border-rose-400 text-white' },
+            { id: 'amber', label: 'Bärnsten', bg: 'bg-amber-500 border-amber-400 text-slate-950' },
+            { id: 'purple', label: 'Lila', bg: 'bg-purple-500 border-purple-400 text-white' },
+            { id: 'blue', label: 'Blå', bg: 'bg-blue-500 border-blue-400 text-white' },
+          ];
+
+          return (
+            <div className="space-y-4">
+              {/* Header Title Card */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 shrink-0 text-amber-400">
+                  {allSameGroup || (activeNotes.length === 1 && activeNotes[0].groupId) ? (
+                    <Boxes className="w-5 h-5" />
+                  ) : (
+                    <StickyNoteIcon className="w-5 h-5" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-slate-100 text-sm truncate">
+                    {allSameGroup
+                      ? currentGroupName
+                      : isMultiple
+                      ? `${activeNotes.length} valda Post-it-lappar`
+                      : activeNotes[0].title || 'Post-it-anteckning'}
+                  </div>
+                  <div className="text-[10px] text-amber-400 font-mono tracking-tight uppercase flex items-center gap-1.5 mt-0.5">
+                    {allSameGroup ? (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <Boxes className="w-3 h-3" />
+                        Grupperade ({activeNotes.length} st)
+                      </span>
+                    ) : (
+                      <span>
+                        {activeNotes.length} {activeNotes.length === 1 ? 'lapp' : 'lappar markerade'}
+                      </span>
+                    )}
+                    {activeNotes.length === 1 && activeNotes[0].groupId && (
+                      <span className="text-cyan-400 truncate">
+                        &bull; I grupp: {activeNotes[0].groupName || 'Grupp'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Note about Unit Dragging */}
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] leading-snug flex items-start gap-2">
+                <Move className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <div>
+                  {allSameGroup ? (
+                    <span>
+                      <strong>Grupperad enhet:</strong> När du drar i en lapp på canvasen flyttas hela gruppen tillsammans.
+                    </span>
+                  ) : isMultiple ? (
+                    <span>
+                      <strong>Markerade lappar:</strong> Klicka på <em>Gruppera</em> nedan för att binda ihop dem till en permanent enhet som flyttas tillsammans.
+                    </span>
+                  ) : activeNotes[0].groupId ? (
+                    <span>
+                      Denna lapp ingår i en grupp och rör sig tillsammans med de andra lapparna i gruppen.
+                    </span>
+                  ) : (
+                    <span>
+                      Dra en markeringsram runt flera lappar på canvasen för att välja och flytta dem tillsammans.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Main Grouping Action Button (Gruppera / Dela upp) */}
+              <div className="space-y-2">
+                {isMultiple && !allSameGroup && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onGroupStickyNotes) {
+                        onGroupStickyNotes(activeNotes.map((n) => n.id), groupNameInput.trim() || undefined);
+                      }
+                    }}
+                    className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 transition cursor-pointer active:scale-98"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    <span>Gruppera alla valda lappar ({activeNotes.length} st)</span>
+                  </button>
+                )}
+
+                {allSameGroup && (
+                  <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Gruppnamn
+                    </label>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        defaultValue={currentGroupName}
+                        onBlur={(e) => {
+                          const val = e.target.value.trim();
+                          if (val && onUpdateMultipleStickyNotes) {
+                            onUpdateMultipleStickyNotes(activeNotes.map((n) => ({ ...n, groupName: val })));
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        placeholder="Ange gruppnamn..."
+                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-xs font-semibold focus:border-amber-400 outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onUngroupStickyNotes && firstGroupId) {
+                          onUngroupStickyNotes(firstGroupId);
+                        }
+                      }}
+                      className="w-full mt-2 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                    >
+                      <FolderMinus className="w-4 h-4 text-amber-400" />
+                      <span>Dela upp grupp (Avgruppera)</span>
+                    </button>
+                  </div>
+                )}
+
+                {!isMultiple && activeNotes[0].groupId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onUngroupStickyNotes && activeNotes[0].groupId) {
+                        onUngroupStickyNotes(activeNotes[0].id);
+                      }
+                    }}
+                    className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                  >
+                    <FolderMinus className="w-4 h-4 text-amber-400" />
+                    <span>Ta bort ur grupp ({activeNotes[0].groupName || 'Grupp'})</span>
+                  </button>
+                )}
+
+                {!isMultiple && !activeNotes[0].groupId && (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onGroupStickyNotes) {
+                          const currentNote = activeNotes[0];
+                          const nearby = stickyNotes.filter((n) => {
+                            if (n.id === currentNote.id) return false;
+                            const dx = n.x - currentNote.x;
+                            const dy = n.y - currentNote.y;
+                            return Math.hypot(dx, dy) < 400;
+                          });
+                          const idsToGroup = [currentNote.id, ...nearby.map((n) => n.id)];
+                          if (idsToGroup.length >= 2) {
+                            onGroupStickyNotes(idsToGroup);
+                          } else if (stickyNotes.length >= 2) {
+                            onGroupStickyNotes(stickyNotes.map((n) => n.id));
+                          }
+                        }
+                      }}
+                      className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 transition cursor-pointer active:scale-98"
+                    >
+                      <FolderPlus className="w-4 h-4" />
+                      <span>⚡ Gruppera med närliggande Post-it</span>
+                    </button>
+
+                    {stickyNotes.length >= 2 && onSelectMultipleStickyNotes && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectMultipleStickyNotes(stickyNotes.map((n) => n.id));
+                        }}
+                        className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 hover:border-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                      >
+                        <Boxes className="w-4 h-4 text-amber-400" />
+                        <span>Markera alla Post-it-lappar ({stickyNotes.length} st)</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Batch Color Themes */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-300 text-xs flex items-center justify-between">
+                  <span>Färgtema för {isMultiple ? 'alla valda' : 'anteckning'}</span>
+                  <Palette className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                  {colorOptions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => handleBatchColor(c.id)}
+                      className={`py-1.5 px-1 rounded-lg border text-[10px] font-bold transition flex items-center justify-center cursor-pointer ${c.bg} hover:scale-105 active:scale-95`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Batch Alignment & Organization (for 2+ notes) */}
+              {isMultiple && (
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                  <div className="font-semibold text-slate-300 text-xs flex items-center justify-between">
+                    <span>Justera & Organisera</span>
+                    <Grid className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleAlign('top')}
+                      className="py-1.5 px-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <AlignLeft className="w-3.5 h-3.5 rotate-90 text-amber-400" />
+                      <span>Linjera upptill</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAlign('left')}
+                      className="py-1.5 px-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <AlignLeft className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Linjera vänster</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAlign('row')}
+                      className="py-1.5 px-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <AlignCenter className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Placera i rad</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAlign('grid')}
+                      className="py-1.5 px-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Grid className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>2-kolumns rutnät</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mode Switcher */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-300 text-xs flex items-center justify-between">
+                  <span>Format & Typ</span>
+                  <CheckSquare className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleBatchMode('text')}
+                    className="py-1.5 px-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-[11px] font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <ListTodo className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Fritext-läge</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBatchMode('todo')}
+                    className="py-1.5 px-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-[11px] font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Checklista</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Members List */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-300 text-xs flex items-center justify-between">
+                  <span>Lappar i urvalet ({activeNotes.length} st)</span>
+                  <span className="text-[10px] font-mono text-slate-500">X, Y</span>
+                </div>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
+                  {activeNotes.map((n) => (
+                    <div
+                      key={n.id}
+                      className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-[11px]"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            n.color === 'cyan'
+                              ? 'bg-cyan-400'
+                              : n.color === 'emerald'
+                              ? 'bg-emerald-400'
+                              : n.color === 'rose'
+                              ? 'bg-rose-400'
+                              : n.color === 'purple'
+                              ? 'bg-purple-400'
+                              : n.color === 'blue'
+                              ? 'bg-blue-400'
+                              : n.color === 'amber'
+                              ? 'bg-amber-400'
+                              : n.color === 'slate'
+                              ? 'bg-slate-400'
+                              : 'bg-amber-300'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-200 truncate">
+                            {n.title?.trim() ? n.title : 'Anteckning (namnlös)'}
+                          </div>
+                          <div className="text-[9px] text-slate-500 truncate">
+                            {n.mode === 'todo' ? 'Checklista' : 'Fritext'} &bull; {n.text ? n.text.slice(0, 25) : 'Tom'}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-mono text-[9px] text-slate-500 shrink-0 ml-2">
+                        {Math.round(n.x)}, {Math.round(n.y)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Delete / Remove Action */}
+              <div className="pt-2 border-t border-slate-800">
+                {confirmDelete ? (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-2">
+                    <p className="text-rose-300 font-semibold text-[11px] text-center">
+                      Radera {activeNotes.length === 1 ? 'denna Post-it' : `alla ${activeNotes.length} valda Post-its`}?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onDeleteStickyNote) {
+                            activeNotes.forEach((n) => onDeleteStickyNote(n.id));
+                          }
+                          setConfirmDelete(false);
+                          onClose();
+                        }}
+                        className="flex-1 py-1.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-500 transition cursor-pointer text-xs"
+                      >
+                        Ja, radera
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(false)}
+                        className="flex-1 py-1.5 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition cursor-pointer text-xs"
+                      >
+                        Avbryt
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl font-semibold flex items-center justify-center gap-2 transition cursor-pointer text-xs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Ta bort {activeNotes.length === 1 ? 'Post-it' : `alla ${activeNotes.length} lappar`}</span>
                   </button>
                 )}
               </div>

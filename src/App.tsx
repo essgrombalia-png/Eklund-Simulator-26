@@ -194,6 +194,13 @@ export default function App() {
       width: 240,
       height: 180,
       opacity: 1,
+      fontSize: 13,
+      titleFontSize: 12,
+      fontFamily: 'sans',
+      fontWeight: 'semibold',
+      fontStyle: 'normal',
+      textAlign: 'left',
+      lineHeight: 'normal',
       updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     updateTopology({ stickyNotes: (prev) => [...prev, newNote] }, 'Lade till digital Post-it');
@@ -209,7 +216,60 @@ export default function App() {
     );
   };
 
+  const handleUpdateMultipleStickyNotes = (updatedNotes: StickyNote[]) => {
+    const updateMap = new Map(updatedNotes.map((n) => [n.id, n]));
+    updateTopology(
+      { stickyNotes: (prev) => prev.map((n) => updateMap.get(n.id) || n) },
+      'Uppdaterade flera Post-it lappar'
+    );
+  };
+
+  const handleGroupStickyNotes = (noteIds: string[], groupName?: string) => {
+    if (noteIds.length < 2) return;
+    const newGroupId = `group_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const defaultGroupName =
+      groupName || `Grupp (${noteIds.length} st)`;
+
+    updateTopology(
+      {
+        stickyNotes: (prev) =>
+          prev.map((n) =>
+            noteIds.includes(n.id)
+              ? { ...n, groupId: newGroupId, groupName: defaultGroupName }
+              : n
+          ),
+      },
+      `Grupperade ${noteIds.length} Post-it lappar`
+    );
+    setSelectedStickyNoteIds(noteIds);
+    if (noteIds.length > 0) {
+      setSelectedStickyNoteId(noteIds[0]);
+    }
+  };
+
+  const handleUngroupStickyNotes = (groupIdOrNoteIds: string | string[]) => {
+    updateTopology(
+      {
+        stickyNotes: (prev) =>
+          prev.map((n) => {
+            if (Array.isArray(groupIdOrNoteIds)) {
+              return groupIdOrNoteIds.includes(n.id)
+                ? { ...n, groupId: undefined, groupName: undefined }
+                : n;
+            } else {
+              return n.groupId === groupIdOrNoteIds
+                ? { ...n, groupId: undefined, groupName: undefined }
+                : n;
+            }
+          }),
+      },
+      'Delade upp Post-it grupp'
+    );
+  };
+
   const handleDeleteStickyNote = (id: string) => {
+    setSelectedStickyNoteId((current) => (current === id ? null : current));
+    setSelectedStickyNoteIds((current) => current.filter((noteId) => noteId !== id));
     updateTopology({ stickyNotes: (prev) => prev.filter((n) => n.id !== id) }, 'Tog bort Post-it');
   };
 
@@ -323,6 +383,8 @@ export default function App() {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
+  const [selectedStickyNoteId, setSelectedStickyNoteId] = useState<string | null>(null);
+  const [selectedStickyNoteIds, setSelectedStickyNoteIds] = useState<string[]>([]);
   const [activeCableType, setActiveCableType] = useState<CableType>('auto');
 
   const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(() => {
@@ -331,10 +393,24 @@ export default function App() {
 
   // On tablet/iPad and mobile screens, automatically collapse palette when selecting an item to inspect
   useEffect(() => {
-    if ((selectedNodeId || selectedLinkId || selectedContainerId) && typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (
+      (selectedNodeId ||
+        selectedLinkId ||
+        selectedContainerId ||
+        selectedStickyNoteId ||
+        selectedStickyNoteIds.length > 0) &&
+      typeof window !== 'undefined' &&
+      window.innerWidth < 1024
+    ) {
       setIsPaletteCollapsed(true);
     }
-  }, [selectedNodeId, selectedLinkId, selectedContainerId]);
+  }, [
+    selectedNodeId,
+    selectedLinkId,
+    selectedContainerId,
+    selectedStickyNoteId,
+    selectedStickyNoteIds.length,
+  ]);
 
   const [activeTab, setActiveTab] = useState<'canvas' | 'terminal' | 'packets' | 'traffic' | 'stats'>('canvas');
   const [showMiniTerminal, setShowMiniTerminal] = useState(false);
@@ -1420,6 +1496,11 @@ export default function App() {
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const selectedLink = links.find((l) => l.id === selectedLinkId) || null;
   const selectedContainer = containers.find((c) => c.id === selectedContainerId) || null;
+  const selectedStickyNotes = useMemo(() => {
+    return stickyNotes.filter(
+      (n) => selectedStickyNoteIds.includes(n.id) || selectedStickyNoteId === n.id
+    );
+  }, [stickyNotes, selectedStickyNoteIds, selectedStickyNoteId]);
 
   const onlineCount = nodes.filter((n) => connectivityMap.get(n.id)).length;
   const activeTheme = SIMULATOR_THEMES[settings.themeId] || SIMULATOR_THEMES.cyber_matrix;
@@ -1597,7 +1678,32 @@ export default function App() {
               isLightMode={activeTheme.isLight}
               onAddStickyNote={handleAddStickyNote}
               onUpdateStickyNote={handleUpdateStickyNote}
+              onUpdateMultipleStickyNotes={handleUpdateMultipleStickyNotes}
               onDeleteStickyNote={handleDeleteStickyNote}
+              onGroupStickyNotes={handleGroupStickyNotes}
+              onUngroupStickyNotes={handleUngroupStickyNotes}
+              selectedStickyNoteId={selectedStickyNoteId}
+              selectedStickyNoteIds={selectedStickyNoteIds}
+              onSelectStickyNote={(id) => {
+                setSelectedStickyNoteId(id);
+                setSelectedStickyNoteIds(id ? [id] : []);
+                if (id) {
+                  setSelectedNodeId(null);
+                  setSelectedNodeIds([]);
+                  setSelectedLinkId(null);
+                  setSelectedContainerId(null);
+                }
+              }}
+              onSelectMultipleStickyNotes={(ids) => {
+                setSelectedStickyNoteIds(ids);
+                setSelectedStickyNoteId(ids.length > 0 ? ids[0] : null);
+                if (ids.length > 0) {
+                  setSelectedNodeId(null);
+                  setSelectedNodeIds([]);
+                  setSelectedLinkId(null);
+                  setSelectedContainerId(null);
+                }
+              }}
               selectedNodeId={selectedNodeId}
               selectedNodeIds={selectedNodeIds}
               selectedLinkId={selectedLinkId}
@@ -1613,6 +1719,8 @@ export default function App() {
                 if (id) {
                   setSelectedLinkId(null);
                   setSelectedContainerId(null);
+                  setSelectedStickyNoteId(null);
+                  setSelectedStickyNoteIds([]);
                 }
               }}
               onToggleMultiSelectNode={handleToggleMultiSelectNode}
@@ -1623,6 +1731,8 @@ export default function App() {
                   setSelectedNodeId(null);
                   setSelectedNodeIds([]);
                   setSelectedContainerId(null);
+                  setSelectedStickyNoteId(null);
+                  setSelectedStickyNoteIds([]);
                 }
               }}
               onSelectContainer={(id) => {
@@ -1631,6 +1741,8 @@ export default function App() {
                   setSelectedNodeId(null);
                   setSelectedNodeIds([]);
                   setSelectedLinkId(null);
+                  setSelectedStickyNoteId(null);
+                  setSelectedStickyNoteIds([]);
                 }
               }}
               onUpdateNodePosition={handleUpdateNodePosition}
@@ -1715,7 +1827,7 @@ export default function App() {
         </div>
 
         {/* Right Inspector Drawer */}
-        {activeTab === 'canvas' && (selectedNode || selectedLink || selectedContainer) && (
+        {activeTab === 'canvas' && (selectedNode || selectedLink || selectedContainer || selectedStickyNotes.length > 0) && (
           <>
             {/* Backdrop for iPad/mobile when Inspector is open */}
             <div
@@ -1725,12 +1837,16 @@ export default function App() {
                 setSelectedNodeIds([]);
                 setSelectedLinkId(null);
                 setSelectedContainerId(null);
+                setSelectedStickyNoteId(null);
+                setSelectedStickyNoteIds([]);
               }}
             />
             <Inspector
               selectedNode={selectedNode}
               selectedLink={selectedLink}
               selectedContainer={selectedContainer}
+              selectedStickyNotes={selectedStickyNotes}
+              stickyNotes={stickyNotes}
               containers={containers}
               nodes={nodes}
               links={links}
@@ -1739,6 +1855,8 @@ export default function App() {
                 setSelectedNodeIds([]);
                 setSelectedLinkId(null);
                 setSelectedContainerId(null);
+                setSelectedStickyNoteId(null);
+                setSelectedStickyNoteIds([]);
               }}
               onUpdateNode={handleUpdateNode}
               onUpdateMultipleNodes={handleUpdateMultipleNodes}
@@ -1752,6 +1870,12 @@ export default function App() {
               onOpenContainerModal={handleOpenContainerModal}
               onUpdateContainer={handleUpdateContainer}
               onDeleteContainer={handleDeleteContainer}
+              onUpdateStickyNote={handleUpdateStickyNote}
+              onUpdateMultipleStickyNotes={handleUpdateMultipleStickyNotes}
+              onDeleteStickyNote={handleDeleteStickyNote}
+              onGroupStickyNotes={handleGroupStickyNotes}
+              onUngroupStickyNotes={handleUngroupStickyNotes}
+              onSelectMultipleStickyNotes={setSelectedStickyNoteIds}
             />
           </>
         )}

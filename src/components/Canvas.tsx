@@ -38,6 +38,21 @@ import {
   Focus,
   GripVertical,
   StickyNote as StickyNoteIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Pin,
+  Type,
+  Palette,
+  ListTodo,
+  CheckSquare,
+  Boxes,
+  FolderPlus,
+  FolderMinus,
 } from 'lucide-react';
 import {
   Device,
@@ -50,6 +65,9 @@ import {
   CapturedPacket,
   SimulatorThemeId,
   StickyNote,
+  StickyNoteFontFamily,
+  StickyNoteTextAlign,
+  StickyNoteColor,
   ActivePacketAnimation,
 } from '../types';
 import { detectNodeWarnings } from '../utils/networkEngine';
@@ -62,7 +80,7 @@ import {
 import { RealisticDeviceIcon } from './RealisticDeviceIcon';
 import { NodeTooltip } from './NodeTooltip';
 import { Minimap } from './Minimap';
-import { StickyNoteCard } from './StickyNoteCard';
+import { StickyNoteCard, FONT_FAMILY_OPTIONS, TEXT_COLOR_PRESETS } from './StickyNoteCard';
 
 interface CanvasProps {
   nodes: Device[];
@@ -70,6 +88,10 @@ interface CanvasProps {
   containers?: NetworkContainer[];
   stickyNotes?: StickyNote[];
   capturedPackets?: CapturedPacket[];
+  selectedStickyNoteId?: string | null;
+  selectedStickyNoteIds?: string[];
+  onSelectStickyNote?: (id: string | null) => void;
+  onSelectMultipleStickyNotes?: (ids: string[]) => void;
   selectedNodeId: string | null;
   selectedNodeIds?: string[];
   selectedLinkId: string | null;
@@ -93,7 +115,10 @@ interface CanvasProps {
   onAddNodeAtPosition: (type: DeviceType, x: number, y: number) => void;
   onAddStickyNote?: (x?: number, y?: number) => void;
   onUpdateStickyNote?: (note: StickyNote) => void;
+  onUpdateMultipleStickyNotes?: (notes: StickyNote[]) => void;
   onDeleteStickyNote?: (id: string) => void;
+  onGroupStickyNotes?: (noteIds: string[], groupName?: string) => void;
+  onUngroupStickyNotes?: (groupIdOrNoteIds: string | string[]) => void;
   onOpenIpModal?: (node: Device) => void;
   onOpenLayoutOptimizer?: () => void;
   onQuickAutoLayout?: () => void;
@@ -255,6 +280,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   containers = [],
   stickyNotes = [],
   capturedPackets = [],
+  selectedStickyNoteId,
+  selectedStickyNoteIds = [],
+  onSelectStickyNote,
+  onSelectMultipleStickyNotes,
   selectedNodeId,
   selectedNodeIds = [],
   selectedLinkId,
@@ -278,7 +307,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   onAddNodeAtPosition,
   onAddStickyNote,
   onUpdateStickyNote,
+  onUpdateMultipleStickyNotes,
   onDeleteStickyNote,
+  onGroupStickyNotes,
+  onUngroupStickyNotes,
   onOpenIpModal,
   onOpenLayoutOptimizer,
   onQuickAutoLayout,
@@ -301,6 +333,52 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Guidance / Info Banner State
   const [showEmptyGuidance, setShowEmptyGuidance] = useState<boolean>(true);
+
+  // Digital Post-it Selection & Formatting Controls State
+  const [localSelectedStickyNoteId, setLocalSelectedStickyNoteId] = useState<string | null>(null);
+  const [localSelectedStickyNoteIds, setLocalSelectedStickyNoteIds] = useState<string[]>([]);
+
+  const currentSelectedStickyNoteId =
+    selectedStickyNoteId !== undefined ? selectedStickyNoteId : localSelectedStickyNoteId;
+  const currentSelectedStickyNoteIds =
+    selectedStickyNoteIds && selectedStickyNoteIds.length > 0
+      ? selectedStickyNoteIds
+      : localSelectedStickyNoteIds.length > 0
+      ? localSelectedStickyNoteIds
+      : currentSelectedStickyNoteId
+      ? [currentSelectedStickyNoteId]
+      : [];
+
+  const handleSelectStickyNote = (id: string | null) => {
+    setLocalSelectedStickyNoteId(id);
+    setLocalSelectedStickyNoteIds(id ? [id] : []);
+    onSelectStickyNote?.(id);
+    onSelectMultipleStickyNotes?.(id ? [id] : []);
+  };
+
+  const handleSelectMultipleStickyNotes = (ids: string[]) => {
+    setLocalSelectedStickyNoteIds(ids);
+    setLocalSelectedStickyNoteId(ids.length > 0 ? ids[0] : null);
+    onSelectStickyNote?.(ids.length > 0 ? ids[0] : null);
+    onSelectMultipleStickyNotes?.(ids);
+  };
+
+  // Sticky Note Multi-Drag State (for moving groups and multiple selected notes together)
+  const [noteMultiDragStart, setNoteMultiDragStart] = useState<{
+    draggedNoteInitial: { id: string; x: number; y: number };
+    initialPositions: Array<{ id: string; x: number; y: number }>;
+  } | null>(null);
+
+  const activeStickyNote = stickyNotes.find((n) => n.id === currentSelectedStickyNoteId) || null;
+
+  const handleUpdateActiveStickyNote = (fields: Partial<StickyNote>) => {
+    if (!activeStickyNote || !onUpdateStickyNote) return;
+    onUpdateStickyNote({
+      ...activeStickyNote,
+      ...fields,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
 
   // Magnetic Grid & Snapping State
   const [snapToGrid, setSnapToGrid] = useState<boolean>(true);
@@ -662,8 +740,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   draggingNoteIdRef.current = draggingNoteId;
   const noteDragOffsetRef = useRef(noteDragOffset);
   noteDragOffsetRef.current = noteDragOffset;
+  const noteMultiDragStartRef = useRef(noteMultiDragStart);
+  noteMultiDragStartRef.current = noteMultiDragStart;
   const onUpdateStickyNoteRef = useRef(onUpdateStickyNote);
   onUpdateStickyNoteRef.current = onUpdateStickyNote;
+  const onUpdateMultipleStickyNotesRef = useRef(onUpdateMultipleStickyNotes);
+  onUpdateMultipleStickyNotesRef.current = onUpdateMultipleStickyNotes;
 
   // Multi-touch Pinch-to-Zoom Reference for iPad & Touch Devices
   const pinchStartRef = useRef<{ dist: number; initialZoom: number } | null>(null);
@@ -959,7 +1041,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         return;
       }
 
-      // Dragging a Sticky Note
+      // Dragging a Sticky Note (single or multi / group)
       if (draggingNoteIdRef.current) {
         const rawX = (e.clientX - rect.left - panRef.current.x) / zoomRef.current - noteDragOffsetRef.current.x;
         const rawY = (e.clientY - rect.top - panRef.current.y) / zoomRef.current - noteDragOffsetRef.current.y;
@@ -973,13 +1055,43 @@ export const Canvas: React.FC<CanvasProps> = ({
           finalY = Math.round(finalY / g) * g;
         }
 
-        const currentNote = stickyNotesRef.current.find((n) => n.id === draggingNoteIdRef.current);
-        if (currentNote && onUpdateStickyNoteRef.current) {
-          onUpdateStickyNoteRef.current({
-            ...currentNote,
-            x: finalX,
-            y: finalY,
-          });
+        const multiDrag = noteMultiDragStartRef.current;
+        if (multiDrag && multiDrag.initialPositions.length > 1) {
+          const deltaX = finalX - multiDrag.draggedNoteInitial.x;
+          const deltaY = finalY - multiDrag.draggedNoteInitial.y;
+
+          if (onUpdateMultipleStickyNotesRef.current) {
+            const updated = multiDrag.initialPositions.map((item) => {
+              const base = stickyNotesRef.current.find((n) => n.id === item.id);
+              return {
+                ...(base || { id: item.id }),
+                id: item.id,
+                x: Math.max(20, Math.min(CANVAS_WIDTH - 150, item.x + deltaX)),
+                y: Math.max(20, Math.min(CANVAS_HEIGHT - 100, item.y + deltaY)),
+              } as StickyNote;
+            });
+            onUpdateMultipleStickyNotesRef.current(updated);
+          } else if (onUpdateStickyNoteRef.current) {
+            multiDrag.initialPositions.forEach((item) => {
+              const base = stickyNotesRef.current.find((n) => n.id === item.id);
+              if (base) {
+                onUpdateStickyNoteRef.current!({
+                  ...base,
+                  x: Math.max(20, Math.min(CANVAS_WIDTH - 150, item.x + deltaX)),
+                  y: Math.max(20, Math.min(CANVAS_HEIGHT - 100, item.y + deltaY)),
+                });
+              }
+            });
+          }
+        } else {
+          const currentNote = stickyNotesRef.current.find((n) => n.id === draggingNoteIdRef.current);
+          if (currentNote && onUpdateStickyNoteRef.current) {
+            onUpdateStickyNoteRef.current({
+              ...currentNote,
+              x: finalX,
+              y: finalY,
+            });
+          }
         }
         return;
       }
@@ -1142,6 +1254,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       setMultiDragStart(null);
       setDraggingContainerId(null);
       setDraggingNoteId(null);
+      setNoteMultiDragStart(null);
       setContainerDragStart(null);
       setActiveGuidelines([]);
 
@@ -1159,12 +1272,32 @@ export const Canvas: React.FC<CanvasProps> = ({
 
         // Only select if user actually dragged more than a tiny tap
         if (Math.hypot(xMax - xMin, yMax - yMin) > 15) {
-          const selected = nodesRef.current
+          const selectedDevices = nodesRef.current
             .filter((n) => n.x >= xMin && n.x <= xMax && n.y >= yMin && n.y <= yMax)
             .map((n) => n.id);
 
-          if (onMultiSelectNodes) {
-            onMultiSelectNodes(selected);
+          const selectedNoteIds = stickyNotesRef.current
+            .filter((note) => {
+              const nw = note.width || 240;
+              const nh = note.height || 180;
+              const noteXMin = note.x;
+              const noteXMax = note.x + nw;
+              const noteYMin = note.y;
+              const noteYMax = note.y + nh;
+              return !(noteXMax < xMin || noteXMin > xMax || noteYMax < yMin || noteYMin > yMax);
+            })
+            .map((n) => n.id);
+
+          if (selectedNoteIds.length > 0) {
+            handleSelectMultipleStickyNotes(selectedNoteIds);
+            if (selectedDevices.length === 0 && onSelectNode) {
+              onSelectNode(null);
+            }
+          } else if (selectedDevices.length > 0) {
+            if (onMultiSelectNodes) {
+              onMultiSelectNodes(selectedDevices);
+            }
+            handleSelectStickyNote(null);
           }
         }
         setSelectionBox(null);
@@ -1365,6 +1498,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         onSelectLink(null);
         if (onSelectContainer) onSelectContainer(null);
         if (onMultiSelectNodes) onMultiSelectNodes([]);
+        handleSelectStickyNote(null);
         setIsPanning(true);
         setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       }
@@ -1770,6 +1904,30 @@ export const Canvas: React.FC<CanvasProps> = ({
           >
             <StickyNoteIcon className="w-3.5 h-3.5 fill-amber-950" />
             <span>+ Ny Post-it</span>
+          </button>
+        )}
+
+        {/* Post-it Typography & Formatting Quick Button */}
+        {stickyNotes.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (currentSelectedStickyNoteId) {
+                handleSelectStickyNote(null);
+              } else {
+                handleSelectStickyNote(stickyNotes[0].id);
+              }
+            }}
+            title="Visa/dölj formateringskontroller för Post-it lappar (Teckensnittsfamilj, Justering, Textfärg)"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer shrink-0 ${
+              currentSelectedStickyNoteId
+                ? 'bg-amber-400/20 text-amber-300 border-amber-400 shadow-sm ring-1 ring-amber-400/50'
+                : 'bg-stone-900/80 hover:bg-stone-800 text-amber-400/90 border-amber-400/30'
+            }`}
+          >
+            <Type className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Post-it Text</span>
           </button>
         )}
 
@@ -3399,32 +3557,648 @@ export const Canvas: React.FC<CanvasProps> = ({
           );
         })}
 
-        {/* Digital Post-its Layer */}
-        {stickyNotes.map((note) => (
-          <StickyNoteCard
-            key={note.id}
-            note={note}
-            zoom={zoom}
-            onUpdate={onUpdateStickyNote ? onUpdateStickyNote : () => {}}
-            onDelete={onDeleteStickyNote ? onDeleteStickyNote : () => {}}
-            onDragStart={(e, noteId) => {
-              e.stopPropagation();
-              if (!containerRef.current) return;
-              const rect = containerRef.current.getBoundingClientRect();
-              const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-              const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-              const mouseCanvasX = (clientX - rect.left - pan.x) / zoom;
-              const mouseCanvasY = (clientY - rect.top - pan.y) / zoom;
-              setDraggingNoteId(noteId);
-              setNoteDragOffset({
-                x: mouseCanvasX - note.x,
-                y: mouseCanvasY - note.y,
+        {/* Digital Post-its Group Boundaries / Outlines */}
+        {stickyNotes
+          .reduce((acc: Array<{ groupId: string; groupName: string; minX: number; minY: number; maxX: number; maxY: number; count: number }>, n) => {
+            if (!n.groupId) return acc;
+            const nw = n.width || 240;
+            const nh = n.height || 180;
+            const existing = acc.find((g) => g.groupId === n.groupId);
+            if (existing) {
+              existing.minX = Math.min(existing.minX, n.x);
+              existing.minY = Math.min(existing.minY, n.y);
+              existing.maxX = Math.max(existing.maxX, n.x + nw);
+              existing.maxY = Math.max(existing.maxY, n.y + nh);
+              existing.count += 1;
+            } else {
+              acc.push({
+                groupId: n.groupId,
+                groupName: n.groupName || 'Post-it Grupp',
+                minX: n.x,
+                minY: n.y,
+                maxX: n.x + nw,
+                maxY: n.y + nh,
+                count: 1,
               });
-              onDragStart?.();
-            }}
-          />
-        ))}
+            }
+            return acc;
+          }, [])
+          .map((group) => {
+            const padding = 16;
+            const gx = group.minX - padding;
+            const gy = group.minY - padding;
+            const gw = group.maxX - group.minX + padding * 2;
+            const gh = group.maxY - group.minY + padding * 2;
+
+            // Check if any member of this group is currently selected
+            const isGroupSelected = stickyNotes.some(
+              (n) => n.groupId === group.groupId && currentSelectedStickyNoteIds.includes(n.id)
+            );
+
+            return (
+              <div
+                key={group.groupId}
+                style={{
+                  position: 'absolute',
+                  left: gx,
+                  top: gy,
+                  width: gw,
+                  height: gh,
+                }}
+                className={`rounded-3xl border-2 border-dashed pointer-events-none z-10 transition-all animate-group-pop ${
+                  isGroupSelected
+                    ? 'border-amber-400 bg-amber-400/[0.08] shadow-[0_0_35px_rgba(245,158,11,0.5)] ring-2 ring-amber-400/30 ring-offset-2 ring-offset-transparent'
+                    : 'border-amber-400/70 bg-amber-500/[0.04] animate-group-glow'
+                }`}
+              >
+                {/* Group Tag / Header Badge */}
+                <div
+                  className={`absolute -top-3.5 left-4 flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-xl backdrop-blur-md transition-all ${
+                    isGroupSelected
+                      ? 'bg-amber-400 text-slate-950 border border-amber-300 ring-2 ring-amber-400/50 scale-105'
+                      : 'bg-slate-900/95 border border-amber-500/80 text-amber-300'
+                  }`}
+                >
+                  <Boxes className={`w-3.5 h-3.5 ${isGroupSelected ? 'text-slate-950' : 'text-amber-400 animate-pulse'}`} />
+                  <span className="tracking-wide">{group.groupName}</span>
+                  <span className={`text-[9px] font-mono ${isGroupSelected ? 'text-slate-900 font-extrabold' : 'text-amber-400/80'}`}>
+                    ({group.count} st samlade)
+                  </span>
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping ml-0.5" />
+                </div>
+              </div>
+            );
+          })}
+
+        {/* Digital Post-its Layer */}
+        {stickyNotes.map((note) => {
+          const isNoteSelected = currentSelectedStickyNoteIds.includes(note.id);
+          return (
+            <StickyNoteCard
+              key={note.id}
+              note={note}
+              zoom={zoom}
+              isSelected={isNoteSelected}
+              allNotes={stickyNotes}
+              selectedNoteIds={currentSelectedStickyNoteIds}
+              onGroupStickyNotes={onGroupStickyNotes}
+              onUngroupStickyNotes={onUngroupStickyNotes}
+              onSelectMultiple={handleSelectMultipleStickyNotes}
+              onSelect={(id, e) => {
+                if (!id) {
+                  handleSelectStickyNote(null);
+                  return;
+                }
+                const isShift = e && 'shiftKey' in e && e.shiftKey;
+                if (isShift) {
+                  // Toggle note in multi-selection
+                  if (currentSelectedStickyNoteIds.includes(id)) {
+                    const next = currentSelectedStickyNoteIds.filter((noteId) => noteId !== id);
+                    handleSelectMultipleStickyNotes(next);
+                  } else {
+                    const next = [...currentSelectedStickyNoteIds, id];
+                    handleSelectMultipleStickyNotes(next);
+                  }
+                } else {
+                  // If note belongs to a group, select all notes in that group!
+                  const targetNote = stickyNotes.find((n) => n.id === id);
+                  if (targetNote && targetNote.groupId) {
+                    const groupNoteIds = stickyNotes
+                      .filter((n) => n.groupId === targetNote.groupId)
+                      .map((n) => n.id);
+                    handleSelectMultipleStickyNotes(groupNoteIds);
+                  } else {
+                    handleSelectStickyNote(id);
+                  }
+                }
+              }}
+              onUpdate={onUpdateStickyNote ? onUpdateStickyNote : () => {}}
+              onDelete={onDeleteStickyNote ? onDeleteStickyNote : () => {}}
+              onDragStart={(e, noteId) => {
+                e.stopPropagation();
+                if (!containerRef.current) return;
+                const rect = containerRef.current.getBoundingClientRect();
+                const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+                const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+                const mouseCanvasX = (clientX - rect.left - pan.x) / zoom;
+                const mouseCanvasY = (clientY - rect.top - pan.y) / zoom;
+
+                // Determine if we should drag a group or multiple selected notes together
+                let notesToDrag: StickyNote[] = [];
+                if (note.groupId) {
+                  notesToDrag = stickyNotes.filter((n) => n.groupId === note.groupId);
+                  const groupIds = notesToDrag.map((n) => n.id);
+                  handleSelectMultipleStickyNotes(groupIds);
+                } else if (currentSelectedStickyNoteIds.includes(noteId) && currentSelectedStickyNoteIds.length > 1) {
+                  notesToDrag = stickyNotes.filter((n) => currentSelectedStickyNoteIds.includes(n.id));
+                } else {
+                  handleSelectStickyNote(noteId);
+                  notesToDrag = [note];
+                }
+
+                if (notesToDrag.length > 1) {
+                  setNoteMultiDragStart({
+                    draggedNoteInitial: { id: note.id, x: note.x, y: note.y },
+                    initialPositions: notesToDrag.map((n) => ({ id: n.id, x: n.x, y: n.y })),
+                  });
+                } else {
+                  setNoteMultiDragStart(null);
+                }
+
+                setDraggingNoteId(noteId);
+                setNoteDragOffset({
+                  x: mouseCanvasX - note.x,
+                  y: mouseCanvasY - note.y,
+                });
+                onDragStart?.();
+              }}
+            />
+          );
+        })}
       </div>
+
+      {/* Floating Digital Post-it Typography & Formatting Toolbar */}
+      {activeStickyNote && (
+        <div
+          data-interactive="true"
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-slate-950/95 border border-amber-400/80 px-3 py-2 rounded-2xl shadow-2xl backdrop-blur-xl animate-fade-in text-xs max-w-[96vw] overflow-x-auto custom-scrollbar select-none"
+        >
+          {/* Post-it Badge & Title Indicator */}
+          <div className="flex items-center gap-1.5 font-bold text-amber-400 px-1 shrink-0">
+            <StickyNoteIcon className="w-4 h-4 fill-amber-400/30 text-amber-400" />
+            <span className="truncate max-w-[110px]" title={activeStickyNote.title || 'Post-it'}>
+              {activeStickyNote.title?.trim() || 'Post-it'}
+            </span>
+          </div>
+
+          {/* Mode Switcher (Anteckning vs Att-göra lista) */}
+          <div className="flex items-center gap-1 shrink-0 bg-slate-900 p-0.5 rounded-xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                if (activeStickyNote.mode === 'todo') {
+                  const todos = activeStickyNote.todos || [];
+                  const textVal =
+                    todos.length > 0
+                      ? todos.map((t) => `${t.completed ? '[x]' : '[ ]'} ${t.text}`).join('\n')
+                      : activeStickyNote.text || '';
+                  handleUpdateActiveStickyNote({ mode: 'text', text: textVal });
+                }
+              }}
+              title="Fritextläge (Vanlig anteckning)"
+              className={`px-2 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                (activeStickyNote.mode || 'text') === 'text'
+                  ? 'bg-amber-400 text-amber-950 font-black shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span>Anteckning</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (activeStickyNote.mode !== 'todo') {
+                  const existingTodos =
+                    activeStickyNote.todos && activeStickyNote.todos.length > 0
+                      ? activeStickyNote.todos
+                      : (activeStickyNote.text || '')
+                          .split('\n')
+                          .map((l) => l.trim())
+                          .filter(Boolean)
+                          .map((line, idx) => {
+                            const isDone = /^(\[x\]|☑|✔️|✅)/i.test(line) || /^\s*-\s*\[x\]/i.test(line);
+                            const cleanText = line.replace(/^(\[[ xX]\]|\- \[[ xX]\]|•|\-|\*)\s*/, '').trim();
+                            return {
+                              id: `todo-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+                              text: cleanText || line,
+                              completed: isDone,
+                            };
+                          });
+                  const defaultTodos =
+                    existingTodos.length > 0
+                      ? existingTodos
+                      : [
+                          { id: `todo-${Date.now()}-1`, text: 'Konfigurera router och brandvägg', completed: false },
+                          { id: `todo-${Date.now()}-2`, text: 'Tilldela IP-adresser & gateway', completed: false },
+                          { id: `todo-${Date.now()}-3`, text: 'Testa ping & anslutning', completed: false },
+                        ];
+                  handleUpdateActiveStickyNote({
+                    mode: 'todo',
+                    todos: defaultTodos,
+                    text: defaultTodos.map((t) => `${t.completed ? '[x]' : '[ ]'} ${t.text}`).join('\n'),
+                  });
+                }
+              }}
+              title="Att-göra-lista (Checklista med klickbara kryssrutor som stryker över)"
+              className={`px-2 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                activeStickyNote.mode === 'todo'
+                  ? 'bg-emerald-400 text-slate-950 font-black shadow-sm ring-1 ring-emerald-300'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <CheckSquare className="w-3.5 h-3.5" />
+              <span>Att-göra</span>
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-slate-800 shrink-0" />
+
+          {/* 1. TECKENSNITT / FONT FAMILJ (Mono vs Sans vs Handskrift etc.) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[10px] text-slate-400 font-mono font-bold uppercase hidden md:inline">
+              Font:
+            </span>
+
+            {/* Sans button */}
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveStickyNote({ fontFamily: 'sans' })}
+              title="Sans-serif: Plus Jakarta Sans (Modern och ren text)"
+              className={`px-2 py-1 rounded-xl font-sans font-bold text-xs transition cursor-pointer ${
+                (activeStickyNote.fontFamily || 'sans') === 'sans'
+                  ? 'bg-amber-400 text-amber-950 shadow-sm font-black'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+              }`}
+            >
+              Sans
+            </button>
+
+            {/* Monospace button (highlighted as requested: monospace vs sans) */}
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveStickyNote({ fontFamily: 'mono' })}
+              title="Monospace: JetBrains Mono (Perfekt för IP, kommandon, subnät & kod)"
+              className={`px-2 py-1 rounded-xl font-mono font-bold text-xs transition cursor-pointer flex items-center gap-1 ${
+                activeStickyNote.fontFamily === 'mono'
+                  ? 'bg-amber-400 text-amber-950 shadow-sm font-black ring-1 ring-amber-300'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+              }`}
+            >
+              <span className="text-[10px] text-emerald-400 font-black">&gt;_</span>
+              <span>Mono</span>
+            </button>
+
+            {/* Handskrift button */}
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveStickyNote({ fontFamily: 'handwriting' })}
+              title="Handskrift: Caveat (Autentisk Post-it stil)"
+              className={`px-2 py-1 rounded-xl text-xs transition cursor-pointer font-caveat ${
+                activeStickyNote.fontFamily === 'handwriting'
+                  ? 'bg-amber-400 text-amber-950 shadow-sm font-black'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+              }`}
+            >
+              Hand
+            </button>
+
+            {/* Complete font family dropdown */}
+            <select
+              value={activeStickyNote.fontFamily || 'sans'}
+              onChange={(e) =>
+                handleUpdateActiveStickyNote({
+                  fontFamily: e.target.value as StickyNoteFontFamily,
+                })
+              }
+              title="Välj teckensnittsfamilj (Sans, Monospace, Handskrift, Space Grotesk, Cyber Orbitron, Serif)"
+              className="bg-slate-900 text-slate-200 text-xs rounded-xl px-2 py-1 border border-slate-800 outline-none cursor-pointer hover:border-slate-700 font-mono"
+            >
+              <option value="sans">Sans (Jakarta)</option>
+              <option value="mono">Monospace (JetBrains)</option>
+              <option value="handwriting">Handskrift (Caveat)</option>
+              <option value="space">Space Grotesk</option>
+              <option value="cyber">Cyber (Orbitron)</option>
+              <option value="serif">Serif (Merriweather)</option>
+            </select>
+          </div>
+
+          <div className="w-px h-5 bg-slate-800 shrink-0" />
+
+          {/* 2. TEXTJUSTERING (Vänster, Center, Höger) */}
+          <div className="flex items-center gap-0.5 bg-slate-900 p-0.5 rounded-xl border border-slate-800 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveStickyNote({ textAlign: 'left' })}
+              title="Vänsterjustera text (Vänster)"
+              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                (activeStickyNote.textAlign || 'left') === 'left'
+                  ? 'bg-amber-400 text-amber-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <AlignLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveStickyNote({ textAlign: 'center' })}
+              title="Centrera text (Center)"
+              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                activeStickyNote.textAlign === 'center'
+                  ? 'bg-amber-400 text-amber-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <AlignCenter className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveStickyNote({ textAlign: 'right' })}
+              title="Högerjustera text (Höger)"
+              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                activeStickyNote.textAlign === 'right'
+                  ? 'bg-amber-400 text-amber-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <AlignRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-slate-800 shrink-0" />
+
+          {/* 3. TEXTFÄRG (Snabbval + Färgväljare) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[10px] text-slate-400 font-mono font-bold uppercase hidden md:inline">
+              Färg:
+            </span>
+
+            {/* Auto (Tema) */}
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveStickyNote({ textColorCustom: undefined })}
+              title="Återställ till automatisk temafärg"
+              className={`px-1.5 py-0.5 rounded-lg text-[10px] font-mono border transition cursor-pointer ${
+                !activeStickyNote.textColorCustom
+                  ? 'bg-amber-400/20 text-amber-300 border-amber-400 font-bold'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+            >
+              Auto
+            </button>
+
+            {/* Color swatches */}
+            {[
+              { hex: '#0f172a', label: 'Kolsvart' },
+              { hex: '#ffffff', label: 'Snövit' },
+              { hex: '#06b6d4', label: 'Cyber Cyan' },
+              { hex: '#10b981', label: 'Smaragdgrön' },
+              { hex: '#f59e0b', label: 'Bärnstensgul' },
+              { hex: '#f43f5e', label: 'Korallröd' },
+              { hex: '#c084fc', label: 'Neonlila' },
+            ].map((swatch) => {
+              const isSelectedColor = activeStickyNote.textColorCustom === swatch.hex;
+              return (
+                <button
+                  key={swatch.hex}
+                  type="button"
+                  onClick={() => handleUpdateActiveStickyNote({ textColorCustom: swatch.hex })}
+                  title={`Textfärg: ${swatch.label} (${swatch.hex})`}
+                  className={`w-5 h-5 rounded-full border transition cursor-pointer flex items-center justify-center ${
+                    isSelectedColor
+                      ? 'ring-2 ring-amber-400 border-white scale-110 shadow-sm'
+                      : 'border-white/20 hover:scale-110 opacity-80 hover:opacity-100'
+                  }`}
+                  style={{ backgroundColor: swatch.hex }}
+                >
+                  {isSelectedColor && (
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        swatch.hex === '#ffffff' || swatch.hex === '#06b6d4' || swatch.hex === '#10b981' || swatch.hex === '#f59e0b'
+                          ? 'bg-slate-950'
+                          : 'bg-white'
+                      }`}
+                    />
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Custom native color picker */}
+            <label
+              title="Välj anpassad textfärg med färgväljare"
+              className="relative w-5 h-5 rounded-full border border-slate-600 bg-gradient-to-tr from-rose-500 via-amber-400 to-cyan-500 cursor-pointer flex items-center justify-center hover:scale-110 transition shadow-sm overflow-hidden"
+            >
+              <input
+                type="color"
+                value={activeStickyNote.textColorCustom || '#f59e0b'}
+                onChange={(e) => handleUpdateActiveStickyNote({ textColorCustom: e.target.value })}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </label>
+          </div>
+
+          <div className="w-px h-5 bg-slate-800 shrink-0" />
+
+          {/* 4. TEXTSTORLEK & FORMAT (A-, A+, Bold, Italic) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                const cur = activeStickyNote.fontSize || 13;
+                handleUpdateActiveStickyNote({ fontSize: Math.max(8, cur - 1) });
+              }}
+              title="Minska textstorlek (A-)"
+              className="w-6 h-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono font-bold flex items-center justify-center cursor-pointer transition text-xs border border-slate-800"
+            >
+              A-
+            </button>
+            <span className="font-mono text-xs font-bold text-amber-400 min-w-[28px] text-center">
+              {activeStickyNote.fontSize || 13}px
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const cur = activeStickyNote.fontSize || 13;
+                handleUpdateActiveStickyNote({ fontSize: Math.min(36, cur + 1) });
+              }}
+              title="Öka textstorlek (A+)"
+              className="w-6 h-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono font-bold flex items-center justify-center cursor-pointer transition text-xs border border-slate-800"
+            >
+              A+
+            </button>
+
+            {/* Bold */}
+            <button
+              type="button"
+              onClick={() => {
+                const isBold =
+                  activeStickyNote.fontWeight === 'bold' || activeStickyNote.fontWeight === 'extrabold';
+                handleUpdateActiveStickyNote({ fontWeight: isBold ? 'normal' : 'bold' });
+              }}
+              title="Fetstil"
+              className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs transition cursor-pointer font-bold ${
+                activeStickyNote.fontWeight === 'bold' || activeStickyNote.fontWeight === 'extrabold'
+                  ? 'bg-amber-400 text-amber-950 font-black'
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+              }`}
+            >
+              <Bold className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Italic */}
+            <button
+              type="button"
+              onClick={() => {
+                const isItalic = activeStickyNote.fontStyle === 'italic';
+                handleUpdateActiveStickyNote({ fontStyle: isItalic ? 'normal' : 'italic' });
+              }}
+              title="Kursiv"
+              className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs transition cursor-pointer ${
+                activeStickyNote.fontStyle === 'italic'
+                  ? 'bg-amber-400 text-amber-950 font-black'
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+              }`}
+            >
+              <Italic className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-slate-800 shrink-0" />
+
+          {/* 5. POST-IT BAKGRUNDSFÄRG */}
+          <div className="flex items-center gap-1 shrink-0">
+            {[
+              { key: 'yellow', color: '#f59e0b', label: 'Gul' },
+              { key: 'cyan', color: '#06b6d4', label: 'Cyan' },
+              { key: 'emerald', color: '#10b981', label: 'Grön' },
+              { key: 'rose', color: '#f43f5e', label: 'Röd' },
+              { key: 'purple', color: '#a855f7', label: 'Lila' },
+              { key: 'blue', color: '#3b82f6', label: 'Blå' },
+            ].map((bg) => (
+              <button
+                key={bg.key}
+                type="button"
+                onClick={() =>
+                  handleUpdateActiveStickyNote({ color: bg.key as StickyNoteColor })
+                }
+                title={`Post-it bakgrundsfärg: ${bg.label}`}
+                className={`w-4 h-4 rounded-full border transition cursor-pointer ${
+                  activeStickyNote.color === bg.key
+                    ? 'ring-2 ring-white scale-110'
+                    : 'border-white/20 opacity-70 hover:opacity-100 hover:scale-105'
+                }`}
+                style={{ backgroundColor: bg.color }}
+              />
+            ))}
+          </div>
+
+          <div className="w-px h-5 bg-slate-800 shrink-0" />
+
+          {/* Stäng / Avmarkera */}
+          <button
+            type="button"
+            onClick={() => handleSelectStickyNote(null)}
+            title="Stäng formateringsverktyg"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Floating Multi-Selection Action Toolbar for Sticky Notes */}
+      {currentSelectedStickyNoteIds.length >= 2 && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-slate-900/95 border border-amber-500/80 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-xl animate-fade-in text-xs max-w-[95vw] overflow-x-auto custom-scrollbar">
+          <div className="flex items-center gap-1.5 font-bold text-amber-300 shrink-0">
+            <Boxes className="w-4 h-4 text-amber-400" />
+            <span>{currentSelectedStickyNoteIds.length} Post-it lappar markerade</span>
+          </div>
+
+          <div className="w-px h-4 bg-slate-700 mx-1 shrink-0" />
+
+          {/* Group Sticky Notes */}
+          {onGroupStickyNotes && (
+            <button
+              type="button"
+              onClick={() => onGroupStickyNotes(currentSelectedStickyNoteIds)}
+              title="Gruppera markerade Post-it lappar så att de flyttas och hanteras tillsammans"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold hover:from-amber-400 hover:to-amber-500 shadow-md shadow-amber-500/20 transition cursor-pointer shrink-0"
+            >
+              <Boxes className="w-3.5 h-3.5 fill-slate-950" />
+              <span>Gruppera</span>
+            </button>
+          )}
+
+          {/* Ungroup Sticky Notes */}
+          {onUngroupStickyNotes &&
+            stickyNotes.some((n) => currentSelectedStickyNoteIds.includes(n.id) && !!n.groupId) && (
+              <button
+                type="button"
+                onClick={() => onUngroupStickyNotes(currentSelectedStickyNoteIds)}
+                title="Dela upp och ta bort gruppering för markerade lappar"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold border border-amber-500/30 transition cursor-pointer shrink-0"
+              >
+                <FolderMinus className="w-3.5 h-3.5" />
+                <span>Dela upp grupp</span>
+              </button>
+            )}
+
+          {/* Align Row */}
+          {onUpdateMultipleStickyNotes && (
+            <button
+              type="button"
+              onClick={() => {
+                const selected = stickyNotes.filter((n) => currentSelectedStickyNoteIds.includes(n.id));
+                if (selected.length < 2) return;
+                const sorted = [...selected].sort((a, b) => a.x - b.x);
+                const startX = sorted[0].x;
+                const startY = sorted[0].y;
+                let curX = startX;
+                const updated = sorted.map((n) => {
+                  const res = { ...n, x: curX, y: startY };
+                  curX += (n.width || 240) + 20;
+                  return res;
+                });
+                onUpdateMultipleStickyNotes(updated);
+              }}
+              title="Linjera lappar i en horisontell rad"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 transition cursor-pointer shrink-0"
+            >
+              <AlignHorizontalJustifyCenter className="w-3.5 h-3.5 text-amber-400" />
+              <span>Linjera i rad</span>
+            </button>
+          )}
+
+          {/* Align Grid */}
+          {onUpdateMultipleStickyNotes && (
+            <button
+              type="button"
+              onClick={() => {
+                const selected = stickyNotes.filter((n) => currentSelectedStickyNoteIds.includes(n.id));
+                if (selected.length < 2) return;
+                const cols = Math.ceil(Math.sqrt(selected.length));
+                const minX = Math.min(...selected.map((n) => n.x));
+                const minY = Math.min(...selected.map((n) => n.y));
+                const updated = selected.map((n, idx) => {
+                  const col = idx % cols;
+                  const row = Math.floor(idx / cols);
+                  return {
+                    ...n,
+                    x: minX + col * ((n.width || 240) + 20),
+                    y: minY + row * ((n.height || 180) + 20),
+                  };
+                });
+                onUpdateMultipleStickyNotes(updated);
+              }}
+              title="Ordna lappar i ett snyggt rutnät"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 transition cursor-pointer shrink-0"
+            >
+              <Boxes className="w-3.5 h-3.5 text-amber-400" />
+              <span>Rutnät</span>
+            </button>
+          )}
+
+          {/* Clear sticky note selection */}
+          <button
+            type="button"
+            onClick={() => handleSelectStickyNote(null)}
+            title="Avmarkera alla Post-it lappar"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Floating Multi-Selection Action Toolbar */}
       {selectedNodeIds.length >= 2 && (
@@ -3551,6 +4325,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         nodes={nodes}
         links={links}
         containers={containers}
+        stickyNotes={stickyNotes}
         selectedNodeId={selectedNodeId}
         selectedNodeIds={selectedNodeIds}
         zoom={zoom}

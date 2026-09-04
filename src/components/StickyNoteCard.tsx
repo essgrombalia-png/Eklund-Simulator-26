@@ -9,24 +9,57 @@ import {
   Scaling,
   Plus,
   Minus,
-  Maximize2,
   SlidersHorizontal,
   Eye,
   Type,
   X,
   Edit2,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  RotateCcw,
+  Check,
+  CaseSensitive,
+  CheckSquare,
+  Square,
+  ListTodo,
+  FileText,
+  CheckCheck,
+  Boxes,
 } from 'lucide-react';
-import { StickyNote, StickyNoteColor } from '../types';
+import {
+  StickyNote,
+  StickyNoteColor,
+  StickyNoteFontFamily,
+  StickyNoteFontWeight,
+  StickyNoteFontStyle,
+  StickyNoteTextAlign,
+  StickyNoteTextDecoration,
+  StickyNoteLineHeight,
+  StickyNoteMode,
+  StickyNoteTodoItem,
+} from '../types';
 
-interface StickyNoteCardProps {
+export interface StickyNoteCardProps {
   note: StickyNote;
   zoom: number;
+  isSelected?: boolean;
+  onSelect?: (id: string, e?: React.MouseEvent | React.TouchEvent) => void;
   onUpdate: (note: StickyNote) => void;
   onDelete: (id: string) => void;
   onDragStart: (e: React.MouseEvent | React.TouchEvent, noteId: string) => void;
+  onGroupStickyNotes?: (noteIds: string[], groupName?: string) => void;
+  onUngroupStickyNotes?: (groupIdOrNoteIds: string | string[]) => void;
+  allNotes?: StickyNote[];
+  selectedNoteIds?: string[];
+  onSelectMultiple?: (ids: string[]) => void;
 }
 
-const COLOR_STYLES: Record<
+export const COLOR_STYLES: Record<
   StickyNoteColor,
   {
     cardBg: string;
@@ -136,16 +169,107 @@ const SIZE_PRESETS = [
   { label: 'XL', name: 'Full', width: 460, height: 340 },
 ];
 
+export interface FontFamilyOption {
+  key: StickyNoteFontFamily;
+  label: string;
+  name: string;
+  css: string;
+  className: string;
+  sample: string;
+}
+
+export const FONT_FAMILY_OPTIONS: FontFamilyOption[] = [
+  {
+    key: 'handwriting',
+    label: 'Handskrift',
+    name: 'Caveat (Autentisk Post-it)',
+    css: "'Caveat', cursive, sans-serif",
+    className: 'font-caveat',
+    sample: 'Handstil Post-it',
+  },
+  {
+    key: 'sans',
+    label: 'Sans',
+    name: 'Plus Jakarta Sans (Modern & Ren)',
+    css: "'Plus Jakarta Sans', sans-serif",
+    className: 'font-jakarta',
+    sample: 'Modern & Ren',
+  },
+  {
+    key: 'mono',
+    label: 'Mono',
+    name: 'JetBrains Mono (IP, Terminal, Kod)',
+    css: "'JetBrains Mono', monospace",
+    className: 'font-jetbrains',
+    sample: '192.168.1.1/24',
+  },
+  {
+    key: 'space',
+    label: 'Space',
+    name: 'Space Grotesk (Teknisk arkitektur)',
+    css: "'Space Grotesk', sans-serif",
+    className: 'font-space',
+    sample: 'Arkitektur',
+  },
+  {
+    key: 'cyber',
+    label: 'Cyber',
+    name: 'Orbitron (Futuristisk & NOC)',
+    css: "'Orbitron', sans-serif",
+    className: 'font-orbitron',
+    sample: 'NOC ONLINE',
+  },
+  {
+    key: 'serif',
+    label: 'Serif',
+    name: 'Merriweather (Klassisk läsbar)',
+    css: "'Merriweather', serif",
+    className: 'font-merriweather',
+    sample: 'Dokumentation',
+  },
+];
+
+const FONT_SIZE_PRESETS = [
+  { size: 9, label: '9', name: 'XS' },
+  { size: 11, label: '11', name: 'S' },
+  { size: 13, label: '13', name: 'Std' },
+  { size: 15, label: '15', name: 'M' },
+  { size: 18, label: '18', name: 'L' },
+  { size: 22, label: '22', name: 'XL' },
+  { size: 26, label: '26', name: '2XL' },
+  { size: 32, label: '32', name: '3XL' },
+];
+
+export const TEXT_COLOR_PRESETS: { label: string; color?: string; hex?: string }[] = [
+  { label: 'Auto (Tema)', color: undefined },
+  { label: 'Kolsvart', color: '#0f172a', hex: '#0f172a' },
+  { label: 'Snövit', color: '#ffffff', hex: '#ffffff' },
+  { label: 'Cyber Cyan', color: '#06b6d4', hex: '#06b6d4' },
+  { label: 'Smaragd', color: '#10b981', hex: '#10b981' },
+  { label: 'Bärnsten', color: '#f59e0b', hex: '#f59e0b' },
+  { label: 'Korallröd', color: '#f43f5e', hex: '#f43f5e' },
+  { label: 'Neonlila', color: '#c084fc', hex: '#c084fc' },
+];
+
 export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   note,
   zoom,
+  isSelected = false,
+  onSelect,
   onUpdate,
   onDelete,
   onDragStart,
+  onGroupStickyNotes,
+  onUngroupStickyNotes,
+  allNotes,
+  selectedNoteIds,
+  onSelectMultiple,
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showFontSettings, setShowFontSettings] = useState(false);
+  const [showGroupDrawer, setShowGroupDrawer] = useState(false);
   const [titleInput, setTitleInput] = useState(note.title || '');
   const [textInput, setTextInput] = useState(note.text || '');
   const [isResizing, setIsResizing] = useState(false);
@@ -183,6 +307,37 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   const currentHeight = liveDimensions?.height ?? (note.height || 180);
   const currentOpacity = typeof note.opacity === 'number' ? note.opacity : 1;
 
+  // Typography state derived from note or defaults
+  const currentFontSize = note.fontSize || 13;
+  const currentTitleFontSize =
+    note.titleFontSize || Math.min(24, Math.max(11, currentFontSize + 1));
+  const currentFontFamily: StickyNoteFontFamily = note.fontFamily || 'sans';
+  const currentFontWeight: StickyNoteFontWeight = note.fontWeight || 'semibold';
+  const currentFontStyle: StickyNoteFontStyle = note.fontStyle || 'normal';
+  const currentTextAlign: StickyNoteTextAlign = note.textAlign || 'left';
+  const currentTextDecoration: StickyNoteTextDecoration = note.textDecoration || 'none';
+  const currentLineHeight: StickyNoteLineHeight = note.lineHeight || 'normal';
+
+  const selectedFontOption =
+    FONT_FAMILY_OPTIONS.find((f) => f.key === currentFontFamily) || FONT_FAMILY_OPTIONS[1];
+
+  const fontFamilyCss = selectedFontOption.css;
+
+  const fontWeightNumeric =
+    currentFontWeight === 'extrabold'
+      ? 800
+      : currentFontWeight === 'bold'
+      ? 700
+      : currentFontWeight === 'semibold'
+      ? 600
+      : currentFontWeight === 'medium'
+      ? 500
+      : 400;
+
+  const lineHeightNumeric =
+    currentLineHeight === 'tight' ? 1.25 : currentLineHeight === 'relaxed' ? 1.75 : 1.5;
+
+  // Opacity
   const handleSetOpacity = (opacity: number) => {
     const clamped = Math.max(0.15, Math.min(1, Math.round(opacity * 100) / 100));
     onUpdate({
@@ -212,9 +367,324 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
     });
   };
 
+  // Mode & Todo List State
+  const currentMode: StickyNoteMode = note.mode || 'text';
+  const currentTodos: StickyNoteTodoItem[] = note.todos || [];
+  const completedTodoCount = currentTodos.filter((t) => t.completed).length;
+  const totalTodoCount = currentTodos.length;
+  const todoProgressPercent =
+    totalTodoCount > 0 ? Math.round((completedTodoCount / totalTodoCount) * 100) : 0;
+
+  const [newTodoInput, setNewTodoInput] = useState('');
+  const [focusTodoId, setFocusTodoId] = useState<string | null>(null);
+  const todoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    if (focusTodoId && todoInputRefs.current[focusTodoId]) {
+      todoInputRefs.current[focusTodoId]?.focus();
+      setFocusTodoId(null);
+    }
+  }, [focusTodoId, note.todos]);
+
+  // Helper to parse todos from raw text lines
+  const parseTodosFromText = (text: string): StickyNoteTodoItem[] => {
+    const lines = (text || '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length === 0) {
+      return [
+        { id: `todo-${Date.now()}-1`, text: 'Konfigurera router och brandvägg', completed: false },
+        { id: `todo-${Date.now()}-2`, text: 'Tilldela statiska IP-adresser & gateway', completed: false },
+        { id: `todo-${Date.now()}-3`, text: 'Verifiera nätverkskablar och länkar', completed: false },
+        { id: `todo-${Date.now()}-4`, text: 'Testa ping & DNS-uppslagning', completed: false },
+      ];
+    }
+    return lines.map((line, idx) => {
+      const isDone = /^(\[x\]|☑|✔️|✅)/i.test(line) || /^\s*-\s*\[x\]/i.test(line);
+      const cleanText = line.replace(/^(\[[ xX]\]|\- \[[ xX]\]|•|\-|\*)\s*/, '').trim();
+      return {
+        id: `todo-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+        text: cleanText || line,
+        completed: isDone,
+      };
+    });
+  };
+
+  const formatTodosToText = (todos: StickyNoteTodoItem[]): string => {
+    return todos.map((t) => `${t.completed ? '[x]' : '[ ]'} ${t.text}`).join('\n');
+  };
+
+  const handleToggleMode = (targetMode?: StickyNoteMode) => {
+    const nextMode: StickyNoteMode = targetMode || (currentMode === 'todo' ? 'text' : 'todo');
+    if (nextMode === 'todo') {
+      const existingTodos =
+        note.todos && note.todos.length > 0 ? note.todos : parseTodosFromText(note.text);
+      const formatted = formatTodosToText(existingTodos);
+      setTextInput(formatted);
+      onUpdate({
+        ...note,
+        mode: 'todo',
+        todos: existingTodos,
+        text: formatted,
+        updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+    } else {
+      const todos = note.todos || [];
+      const textVal = todos.length > 0 ? formatTodosToText(todos) : (note.text || '');
+      setTextInput(textVal);
+      onUpdate({
+        ...note,
+        mode: 'text',
+        text: textVal,
+        updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+    }
+  };
+
+  const handleToggleTodo = (todoId: string) => {
+    const updated = currentTodos.map((t) =>
+      t.id === todoId ? { ...t, completed: !t.completed } : t
+    );
+    onUpdate({
+      ...note,
+      todos: updated,
+      text: formatTodosToText(updated),
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleUpdateTodoText = (todoId: string, newText: string) => {
+    const updated = currentTodos.map((t) =>
+      t.id === todoId ? { ...t, text: newText } : t
+    );
+    onUpdate({
+      ...note,
+      todos: updated,
+      text: formatTodosToText(updated),
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleAddTodo = (text = '', insertAfterId?: string) => {
+    const newId = `todo-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newItem: StickyNoteTodoItem = {
+      id: newId,
+      text,
+      completed: false,
+    };
+    let updated: StickyNoteTodoItem[];
+    if (insertAfterId) {
+      const idx = currentTodos.findIndex((t) => t.id === insertAfterId);
+      if (idx !== -1) {
+        updated = [
+          ...currentTodos.slice(0, idx + 1),
+          newItem,
+          ...currentTodos.slice(idx + 1),
+        ];
+      } else {
+        updated = [...currentTodos, newItem];
+      }
+    } else {
+      updated = [...currentTodos, newItem];
+    }
+    setFocusTodoId(newId);
+    onUpdate({
+      ...note,
+      mode: 'todo',
+      todos: updated,
+      text: formatTodosToText(updated),
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+    return newId;
+  };
+
+  const handleDeleteTodo = (todoId: string) => {
+    const updated = currentTodos.filter((t) => t.id !== todoId);
+    onUpdate({
+      ...note,
+      todos: updated,
+      text: formatTodosToText(updated),
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleTodoKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    todoId: string,
+    index: number
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTodo('', todoId);
+    } else if (e.key === 'Backspace' && currentTodos[index]?.text === '') {
+      e.preventDefault();
+      if (currentTodos.length > 1) {
+        handleDeleteTodo(todoId);
+        const prevIndex = Math.max(0, index - 1);
+        const prevId = currentTodos[prevIndex]?.id;
+        if (prevId) {
+          setFocusTodoId(prevId);
+        }
+      }
+    } else if (e.key === 'ArrowUp' && index > 0) {
+      e.preventDefault();
+      const prevId = currentTodos[index - 1]?.id;
+      if (prevId) {
+        todoInputRefs.current[prevId]?.focus();
+      }
+    } else if (e.key === 'ArrowDown' && index < currentTodos.length - 1) {
+      e.preventDefault();
+      const nextId = currentTodos[index + 1]?.id;
+      if (nextId) {
+        todoInputRefs.current[nextId]?.focus();
+      }
+    }
+  };
+
+  const handleClearCompletedTodos = () => {
+    const updated = currentTodos.filter((t) => !t.completed);
+    onUpdate({
+      ...note,
+      todos: updated,
+      text: formatTodosToText(updated),
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleToggleAllTodos = () => {
+    const allDone = currentTodos.length > 0 && currentTodos.every((t) => t.completed);
+    const updated = currentTodos.map((t) => ({ ...t, completed: !allDone }));
+    onUpdate({
+      ...note,
+      todos: updated,
+      text: formatTodosToText(updated),
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
   const handleSetColor = (color: StickyNoteColor) => {
     onUpdate({ ...note, color });
     setShowColorPicker(false);
+  };
+
+  // Typography Handlers
+  const handleSetFontSize = (size: number) => {
+    const clamped = Math.max(8, Math.min(48, Math.round(size)));
+    onUpdate({
+      ...note,
+      fontSize: clamped,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleStepFontSize = (delta: number) => {
+    const step = currentFontSize >= 22 ? 2 * delta : delta;
+    handleSetFontSize(currentFontSize + step);
+  };
+
+  const handleSetTitleFontSize = (size: number) => {
+    const clamped = Math.max(9, Math.min(32, Math.round(size)));
+    onUpdate({
+      ...note,
+      titleFontSize: clamped,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleSetFontFamily = (family: StickyNoteFontFamily) => {
+    onUpdate({
+      ...note,
+      fontFamily: family,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleToggleBold = () => {
+    const nextWeight: StickyNoteFontWeight =
+      currentFontWeight === 'bold' || currentFontWeight === 'extrabold' ? 'normal' : 'bold';
+    onUpdate({
+      ...note,
+      fontWeight: nextWeight,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleSetFontWeight = (weight: StickyNoteFontWeight) => {
+    onUpdate({
+      ...note,
+      fontWeight: weight,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleToggleItalic = () => {
+    const nextStyle: StickyNoteFontStyle = currentFontStyle === 'italic' ? 'normal' : 'italic';
+    onUpdate({
+      ...note,
+      fontStyle: nextStyle,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleToggleUnderline = () => {
+    const nextDec: StickyNoteTextDecoration =
+      currentTextDecoration === 'underline' ? 'none' : 'underline';
+    onUpdate({
+      ...note,
+      textDecoration: nextDec,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleToggleStrikethrough = () => {
+    const nextDec: StickyNoteTextDecoration =
+      currentTextDecoration === 'line-through' ? 'none' : 'line-through';
+    onUpdate({
+      ...note,
+      textDecoration: nextDec,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleSetTextAlign = (align: StickyNoteTextAlign) => {
+    onUpdate({
+      ...note,
+      textAlign: align,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleSetLineHeight = (lineHeight: StickyNoteLineHeight) => {
+    onUpdate({
+      ...note,
+      lineHeight,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleSetTextColor = (color?: string) => {
+    onUpdate({
+      ...note,
+      textColorCustom: color,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
+  const handleResetTypography = () => {
+    onUpdate({
+      ...note,
+      fontSize: 13,
+      titleFontSize: 12,
+      fontFamily: 'sans',
+      fontWeight: 'semibold',
+      fontStyle: 'normal',
+      textAlign: 'left',
+      textDecoration: 'none',
+      lineHeight: 'normal',
+      textColorCustom: undefined,
+      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
   };
 
   // Resize Handlers
@@ -325,6 +795,33 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   };
 
   const handleInsertTemplate = (type: 'ip' | 'vlan' | 'security' | 'todo') => {
+    if (type === 'todo') {
+      const suggestedTitle =
+        !titleInput.trim() || titleInput === 'Anteckning' ? 'Checklista' : titleInput;
+      setTitleInput(suggestedTitle);
+
+      const checklistItems: StickyNoteTodoItem[] = [
+        { id: `todo-${Date.now()}-1`, text: 'Konfigurera brandvägg & NAT-regler', completed: false },
+        { id: `todo-${Date.now()}-2`, text: 'Tilldela IP-adresser till routrar & switchar', completed: false },
+        { id: `todo-${Date.now()}-3`, text: 'Testa ping mellan klienter och server', completed: false },
+        { id: `todo-${Date.now()}-4`, text: 'Verifiera DNS-uppslag och gateway', completed: false },
+        { id: `todo-${Date.now()}-5`, text: 'Säkerställ redundans för länkarna', completed: false },
+      ];
+
+      const textRepresentation = formatTodosToText(checklistItems);
+      setTextInput(textRepresentation);
+
+      onUpdate({
+        ...note,
+        mode: 'todo',
+        title: suggestedTitle,
+        todos: checklistItems,
+        text: textRepresentation,
+        updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+      return;
+    }
+
     let snippet = '';
     let suggestedTitle = '';
     if (type === 'ip') {
@@ -336,15 +833,13 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
     } else if (type === 'security') {
       snippet = '\n🔒 Säkerhetsregel:\n- Endast HTTPS (443) tillåten från WAN\n- SSH begränsad till Bastion Host';
       suggestedTitle = 'Säkerhetsregler';
-    } else if (type === 'todo') {
-      snippet = '\n[ ] Konfigurera brandvägg\n[ ] Testa ping & routning\n[ ] Verifiera DNS-uppslagning';
-      suggestedTitle = 'Checklista';
     }
 
     const updated = (textInput ? textInput.trim() + '\n' : '') + snippet.trimStart();
     setTextInput(updated);
 
-    const nextTitle = !titleInput.trim() || titleInput === 'Anteckning' ? suggestedTitle : titleInput;
+    const nextTitle =
+      !titleInput.trim() || titleInput === 'Anteckning' ? suggestedTitle : titleInput;
     if (nextTitle !== titleInput) {
       setTitleInput(nextTitle);
     }
@@ -357,8 +852,22 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
     });
   };
 
+  const isFontCustomized =
+    (note.fontSize && note.fontSize !== 13) ||
+    (note.fontFamily && note.fontFamily !== 'sans') ||
+    note.fontStyle === 'italic' ||
+    (note.fontWeight && note.fontWeight !== 'semibold') ||
+    note.textDecoration === 'underline' ||
+    note.textDecoration === 'line-through' ||
+    (note.textAlign && note.textAlign !== 'left') ||
+    note.textColorCustom !== undefined;
+
   return (
     <div
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect?.(note.id);
+      }}
       style={{
         position: 'absolute',
         left: note.x,
@@ -368,6 +877,12 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         opacity: currentOpacity,
       }}
       className={`group rounded-2xl border ${theme.cardBg} ${theme.shadow} ${
+        isSelected
+          ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.5)] scale-[1.01]'
+          : note.groupId
+          ? 'ring-1 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+          : ''
+      } ${
         isResizing ? 'ring-2 ring-cyan-400 shadow-2xl scale-[1.01]' : ''
       } transition-all duration-75 z-20 overflow-hidden flex flex-col select-none`}
     >
@@ -377,11 +892,13 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
       {/* Header / Drag Bar */}
       <div
         onMouseDown={(e) => {
+          onSelect?.(note.id, e);
           if (!note.isPinned) {
             onDragStart(e, note.id);
           }
         }}
         onTouchStart={(e) => {
+          onSelect?.(note.id, e);
           if (!note.isPinned) {
             onDragStart(e, note.id);
           }
@@ -404,18 +921,99 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             title="Klicka för att namnge anteckning i rubrikfältet"
             className={`text-xs font-extrabold truncate text-left cursor-pointer hover:underline flex items-center gap-1 min-w-0 ${theme.titleColor}`}
           >
-            <span className="truncate">{note.title?.trim() ? note.title : 'Anteckning (namnlös)'}</span>
+            <span className="truncate" style={{ fontFamily: fontFamilyCss }}>
+              {note.title?.trim() ? note.title : 'Anteckning (namnlös)'}
+            </span>
             <Edit2 className="w-2.5 h-2.5 opacity-50 shrink-0" />
           </button>
+
+          {note.groupId && (
+            <span
+              title={`Ingår i grupp: ${note.groupName || 'Grupp'} (flyttas som en enhet)`}
+              className="px-1 py-0.5 rounded bg-black/20 text-current text-[8px] font-black uppercase tracking-wider flex items-center gap-0.5 shrink-0 opacity-80"
+            >
+              <Boxes className="w-2.5 h-2.5" />
+              <span className="max-w-[70px] truncate">{note.groupName || 'Grupp'}</span>
+            </span>
+          )}
         </div>
 
         {/* Note Controls */}
-        <div className="flex items-center gap-1 shrink-0" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center gap-1 shrink-0"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          {/* Mode Toggle Button: Textanteckning vs Att-göra-lista (Checklista) */}
+          <button
+            type="button"
+            onClick={() => handleToggleMode()}
+            title={
+              currentMode === 'todo'
+                ? 'Växla till fritext-läge (Anteckning)'
+                : 'Växla till Att-göra-lista (Checklista med kryssrutor)'
+            }
+            className={`px-1.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer font-bold text-[10px] ${
+              currentMode === 'todo'
+                ? isYellow
+                  ? 'bg-amber-400 text-amber-950 ring-1 ring-amber-700 shadow-sm'
+                  : 'bg-emerald-500 text-slate-950 ring-1 ring-emerald-300 shadow-sm'
+                : isYellow
+                ? 'hover:bg-amber-400/90 text-amber-950'
+                : 'hover:bg-white/10 text-slate-300 hover:text-white'
+            }`}
+          >
+            {currentMode === 'todo' ? (
+              <>
+                <CheckSquare className="w-3.5 h-3.5 shrink-0" />
+                <span className="font-mono text-[9px] leading-none">
+                  {completedTodoCount}/{totalTodoCount}
+                </span>
+              </>
+            ) : (
+              <>
+                <ListTodo className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-[9px] leading-none hidden sm:inline">Att göra</span>
+              </>
+            )}
+          </button>
+
+          {/* Typography & Font Settings Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowFontSettings(!showFontSettings);
+              setShowSettings(false);
+              setShowSizePicker(false);
+              setShowColorPicker(false);
+            }}
+            title="Typsnitt & textstorlek (Justera font, storlek, fetstil, kursiv, radavstånd, färg m.m.)"
+            className={`p-1 rounded-md transition flex items-center gap-0.5 cursor-pointer ${
+              showFontSettings
+                ? isYellow
+                  ? 'bg-amber-400 text-amber-950 font-bold ring-1 ring-amber-700'
+                  : 'bg-cyan-500/50 text-white ring-1 ring-cyan-300'
+                : isFontCustomized
+                ? isYellow
+                  ? 'bg-amber-400/90 text-amber-950 font-black ring-1 ring-amber-600/70 shadow-sm'
+                  : 'bg-cyan-500/30 text-cyan-200 ring-1 ring-cyan-400/70 shadow-sm'
+                : isYellow
+                ? 'hover:bg-amber-400/90 text-amber-950'
+                : 'hover:bg-white/10 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Type className="w-3.5 h-3.5" />
+            <span className="text-[8.5px] font-mono font-bold leading-none pr-0.5">
+              {currentFontSize}px
+            </span>
+          </button>
+
           {/* Settings / Opacity Menu Toggle */}
           <button
             type="button"
             onClick={() => {
               setShowSettings(!showSettings);
+              setShowFontSettings(false);
               setShowSizePicker(false);
               setShowColorPicker(false);
             }}
@@ -442,13 +1040,15 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             )}
           </button>
 
-          {/* Quick Zoom / Size Control Button */}
+          {/* Quick Note Box Size Control Button */}
           <button
             type="button"
             onClick={() => {
               setShowSizePicker(!showSizePicker);
+              setShowFontSettings(false);
               setShowColorPicker(false);
               setShowSettings(false);
+              setShowGroupDrawer(false);
             }}
             title="Ändra storlek på Post-it (Mindre/Större, S, M, L, XL)"
             className={`p-1 rounded-md transition ${
@@ -464,11 +1064,40 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             <Scaling className="w-3.5 h-3.5" />
           </button>
 
+          {/* Grouping / Group Drawer Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowGroupDrawer(!showGroupDrawer);
+              setShowColorPicker(false);
+              setShowFontSettings(false);
+              setShowSizePicker(false);
+              setShowSettings(false);
+            }}
+            title={
+              note.groupId
+                ? `Ingår i grupp: ${note.groupName || 'Grupp'} (Hantera gruppering)`
+                : 'Gruppera Post-it-lappar (Klicka för 1-klicks gruppering med närliggande)'
+            }
+            className={`p-1 rounded-md transition flex items-center gap-0.5 cursor-pointer ${
+              showGroupDrawer || note.groupId
+                ? isYellow
+                  ? 'bg-amber-400 text-amber-950 font-bold ring-1 ring-amber-700'
+                  : 'bg-emerald-500/50 text-emerald-100 ring-1 ring-emerald-300'
+                : isYellow
+                ? 'hover:bg-amber-400/90 text-amber-950'
+                : 'hover:bg-white/10 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Boxes className="w-3.5 h-3.5" />
+          </button>
+
           {/* Color Selector Toggle */}
           <button
             type="button"
             onClick={() => {
               setShowColorPicker(!showColorPicker);
+              setShowFontSettings(false);
               setShowSizePicker(false);
               setShowSettings(false);
             }}
@@ -519,6 +1148,419 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Typography & Font Settings Drawer */}
+      {showFontSettings && (
+        <div
+          className="p-2.5 max-h-64 overflow-y-auto custom-scrollbar border-b border-current/20 bg-black/45 backdrop-blur-md flex flex-col gap-2.5 animate-fade-in text-[10px]"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          {/* Drawer Header & Quick Reset */}
+          <div className="flex items-center justify-between gap-1.5 border-b border-white/15 pb-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="p-1 rounded bg-white/10 shrink-0">
+                <Type className="w-3.5 h-3.5 text-cyan-300" />
+              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="font-mono font-extrabold text-[10.5px] leading-tight text-white flex items-center gap-1">
+                  Typsnitt & Font
+                </span>
+                <span className="font-mono text-[8.5px] opacity-75 truncate">
+                  {selectedFontOption.label} • {currentFontSize}px
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={handleResetTypography}
+                title="Återställ alla fontinställningar till standard"
+                className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white font-mono text-[9px] flex items-center gap-1 cursor-pointer transition"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                <span>Återställ</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFontSettings(false)}
+                title="Stäng fontpanel"
+                className="p-1 rounded bg-white/10 hover:bg-white/20 text-white cursor-pointer transition"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* 1. Font Size Control (Slider + Presets + Steppers) */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-mono font-bold opacity-85 text-[10px] flex items-center gap-1">
+                <span>Textstorlek (Font Size):</span>
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleStepFontSize(-1)}
+                  title="Minska fontstorlek med 1px (A-)"
+                  className="w-5 h-5 rounded bg-white/15 hover:bg-white/25 text-white font-mono font-black flex items-center justify-center cursor-pointer transition active:scale-95"
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+                <span
+                  className={`font-mono font-black px-1.5 py-0.5 rounded text-[10px] min-w-[36px] text-center ${
+                    isYellow
+                      ? 'bg-amber-400 text-amber-950 font-bold'
+                      : 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/40'
+                  }`}
+                >
+                  {currentFontSize}px
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleStepFontSize(1)}
+                  title="Öka fontstorlek med 1px (A+)"
+                  className="w-5 h-5 rounded bg-white/15 hover:bg-white/25 text-white font-mono font-black flex items-center justify-center cursor-pointer transition active:scale-95"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Slider */}
+            <div className="flex items-center gap-2">
+              <span className="font-mono opacity-60 text-[8.5px] shrink-0">8px</span>
+              <input
+                type="range"
+                min="8"
+                max="36"
+                step="1"
+                value={currentFontSize}
+                onChange={(e) => handleSetFontSize(Number(e.target.value))}
+                className="w-full h-1.5 bg-white/25 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                title={`Dra för att ändra textstorlek (${currentFontSize}px)`}
+              />
+              <span className="font-mono opacity-60 text-[8.5px] shrink-0">36px</span>
+            </div>
+
+            {/* Size Presets */}
+            <div className="flex items-center gap-1 flex-wrap pt-0.5">
+              <span className="font-mono text-[9px] opacity-70 mr-0.5 shrink-0">Snabbval:</span>
+              {FONT_SIZE_PRESETS.map((p) => {
+                const isSelected = currentFontSize === p.size;
+                return (
+                  <button
+                    key={p.size}
+                    type="button"
+                    onClick={() => handleSetFontSize(p.size)}
+                    title={`${p.name} (${p.size}px)`}
+                    className={`px-1.5 py-0.5 rounded font-mono font-bold text-[9px] transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-white text-slate-950 shadow-sm scale-105 font-black'
+                        : isYellow
+                        ? 'bg-amber-400/60 hover:bg-amber-400 text-amber-950'
+                        : 'bg-white/15 hover:bg-white/30 text-white'
+                    }`}
+                  >
+                    {p.size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. Font Family Selection */}
+          <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/15">
+            <span className="font-mono font-bold opacity-85 text-[10px]">Typsnittsfamilj (Font):</span>
+            <div className="grid grid-cols-2 gap-1">
+              {FONT_FAMILY_OPTIONS.map((f) => {
+                const isSelected = currentFontFamily === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => handleSetFontFamily(f.key)}
+                    title={f.name}
+                    className={`p-1.5 rounded-lg border text-left flex flex-col gap-0.5 transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-white text-slate-950 border-white shadow-md scale-[1.02]'
+                        : isYellow
+                        ? 'bg-amber-400/40 hover:bg-amber-400/80 text-amber-950 border-amber-500/40'
+                        : 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-mono font-bold text-[9.5px] truncate">{f.label}</span>
+                      {isSelected && <Check className="w-2.5 h-2.5 shrink-0 text-cyan-600 font-bold" />}
+                    </div>
+                    <span
+                      style={{ fontFamily: f.css }}
+                      className="text-xs truncate opacity-90 leading-tight"
+                    >
+                      {f.sample}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3. Formatting & Styles (Bold, Italic, Underline, Strikethrough, Align, LineHeight) */}
+          <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/15">
+            <span className="font-mono font-bold opacity-85 text-[10px]">Stil & Formatering:</span>
+
+            <div className="flex items-center justify-between gap-1 flex-wrap">
+              {/* Bold, Italic, Underline, Strikethrough group */}
+              <div className="flex items-center gap-0.5 bg-black/25 p-0.5 rounded-lg border border-white/15">
+                {/* Bold */}
+                <button
+                  type="button"
+                  onClick={handleToggleBold}
+                  title="Fetstil / Bold (Ctrl+B)"
+                  className={`w-6 h-6 rounded flex items-center justify-center font-bold text-xs transition cursor-pointer ${
+                    currentFontWeight === 'bold' || currentFontWeight === 'extrabold'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <Bold className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Italic */}
+                <button
+                  type="button"
+                  onClick={handleToggleItalic}
+                  title="Kursiv / Italic (Ctrl+I)"
+                  className={`w-6 h-6 rounded flex items-center justify-center text-xs transition cursor-pointer ${
+                    currentFontStyle === 'italic'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <Italic className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Underline */}
+                <button
+                  type="button"
+                  onClick={handleToggleUnderline}
+                  title="Understruken / Underline"
+                  className={`w-6 h-6 rounded flex items-center justify-center text-xs transition cursor-pointer ${
+                    currentTextDecoration === 'underline'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <Underline className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Strikethrough */}
+                <button
+                  type="button"
+                  onClick={handleToggleStrikethrough}
+                  title="Genomstruken (Perfekt för klara uppgifter / checklistor)"
+                  className={`w-6 h-6 rounded flex items-center justify-center text-xs transition cursor-pointer ${
+                    currentTextDecoration === 'line-through'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <Strikethrough className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Text Alignment group */}
+              <div className="flex items-center gap-0.5 bg-black/25 p-0.5 rounded-lg border border-white/15">
+                <button
+                  type="button"
+                  onClick={() => handleSetTextAlign('left')}
+                  title="Vänsterjustera text"
+                  className={`w-6 h-6 rounded flex items-center justify-center transition cursor-pointer ${
+                    currentTextAlign === 'left'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <AlignLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetTextAlign('center')}
+                  title="Centrera text"
+                  className={`w-6 h-6 rounded flex items-center justify-center transition cursor-pointer ${
+                    currentTextAlign === 'center'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <AlignCenter className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetTextAlign('right')}
+                  title="Högerjustera text"
+                  className={`w-6 h-6 rounded flex items-center justify-center transition cursor-pointer ${
+                    currentTextAlign === 'right'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <AlignRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Font Weight & Line Height chips */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* Font Weight selector */}
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[9px] opacity-75">Tjocklek (Weight):</span>
+                <div className="flex items-center gap-1">
+                  {(['normal', 'semibold', 'bold', 'extrabold'] as StickyNoteFontWeight[]).map(
+                    (w) => {
+                      const isSel = currentFontWeight === w;
+                      const labels: Record<StickyNoteFontWeight, string> = {
+                        normal: 'Vanlig',
+                        medium: 'Medel',
+                        semibold: 'Halvfet',
+                        bold: 'Fet',
+                        extrabold: 'Max',
+                      };
+                      return (
+                        <button
+                          key={w}
+                          type="button"
+                          onClick={() => handleSetFontWeight(w)}
+                          title={`Tjocklek: ${labels[w]}`}
+                          className={`flex-1 py-0.5 rounded text-[8.5px] font-mono transition cursor-pointer text-center ${
+                            isSel
+                              ? 'bg-white text-slate-950 font-black shadow-sm'
+                              : isYellow
+                              ? 'bg-amber-400/50 hover:bg-amber-400 text-amber-950'
+                              : 'bg-white/10 hover:bg-white/20 text-white'
+                          }`}
+                        >
+                          {labels[w]}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+
+              {/* Line Height selector */}
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[9px] opacity-75">Radavstånd:</span>
+                <div className="flex items-center gap-1">
+                  {(['tight', 'normal', 'relaxed'] as StickyNoteLineHeight[]).map((lh) => {
+                    const isSel = currentLineHeight === lh;
+                    const labels: Record<StickyNoteLineHeight, string> = {
+                      tight: 'Tätt',
+                      normal: 'Normal',
+                      relaxed: 'Luftigt',
+                    };
+                    return (
+                      <button
+                        key={lh}
+                        type="button"
+                        onClick={() => handleSetLineHeight(lh)}
+                        title={`Radavstånd: ${labels[lh]}`}
+                        className={`flex-1 py-0.5 rounded text-[8.5px] font-mono transition cursor-pointer text-center ${
+                          isSel
+                            ? 'bg-white text-slate-950 font-black shadow-sm'
+                            : isYellow
+                            ? 'bg-amber-400/50 hover:bg-amber-400 text-amber-950'
+                            : 'bg-white/10 hover:bg-white/20 text-white'
+                        }`}
+                      >
+                        {labels[lh]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Text Color Customization */}
+          <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/15">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-mono font-bold opacity-85 text-[10px]">
+                Textfärg & Kontrast:
+              </span>
+              {note.textColorCustom && (
+                <button
+                  type="button"
+                  onClick={() => handleSetTextColor(undefined)}
+                  className="text-[8.5px] font-mono text-cyan-300 hover:underline cursor-pointer"
+                >
+                  Återställ till tema
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {TEXT_COLOR_PRESETS.map((p) => {
+                const isSelected =
+                  p.color === undefined ? !note.textColorCustom : note.textColorCustom === p.color;
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => handleSetTextColor(p.color)}
+                    title={p.label}
+                    className={`h-5 px-1.5 rounded flex items-center gap-1 border transition cursor-pointer text-[8.5px] font-mono font-bold ${
+                      isSelected
+                        ? 'ring-2 ring-white border-white scale-105 shadow-sm'
+                        : 'border-white/20 opacity-85 hover:opacity-100 hover:scale-105'
+                    } ${
+                      p.color ? '' : isYellow ? 'bg-amber-950 text-amber-100' : 'bg-white/20 text-white'
+                    }`}
+                    style={
+                      p.color
+                        ? {
+                            backgroundColor: p.color,
+                            color: p.color === '#ffffff' || p.color === '#06b6d4' || p.color === '#10b981' || p.color === '#f59e0b' ? '#0f172a' : '#ffffff',
+                          }
+                        : undefined
+                    }
+                  >
+                    <span>{p.label}</span>
+                    {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 5. Title Font Size */}
+          <div className="flex flex-col gap-1 pt-1.5 border-t border-white/15">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-mono font-bold opacity-85 text-[10px]">
+                Rubrikstorlek (Title):
+              </span>
+              <span className="font-mono font-extrabold text-[9.5px] opacity-80">
+                {currentTitleFontSize}px
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono opacity-60 text-[8.5px]">10px</span>
+              <input
+                type="range"
+                min="10"
+                max="26"
+                step="1"
+                value={currentTitleFontSize}
+                onChange={(e) => handleSetTitleFontSize(Number(e.target.value))}
+                className="w-full h-1.5 bg-white/25 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                title={`Rubrikstorlek (${currentTitleFontSize}px)`}
+              />
+              <span className="font-mono opacity-60 text-[8.5px]">26px</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings & Opacity Drawer */}
       {showSettings && (
@@ -706,6 +1748,111 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         </div>
       )}
 
+      {/* Group Drawer Panel */}
+      {showGroupDrawer && (
+        <div
+          className="p-2.5 border-b border-current/20 bg-slate-950/95 text-slate-100 backdrop-blur-md animate-fade-in text-[11px] space-y-2"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between font-bold text-amber-300">
+            <span className="flex items-center gap-1.5">
+              <Boxes className="w-4 h-4 text-amber-400" />
+              <span>Post-it Gruppering</span>
+            </span>
+            {note.groupId && (
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] border border-emerald-500/40 font-mono">
+                {note.groupName || 'I grupp'}
+              </span>
+            )}
+          </div>
+
+          {note.groupId ? (
+            <div className="space-y-1.5">
+              <div className="text-[10px] text-slate-300">
+                Denna lapp ingår i en grupp och rör sig tillsammans med alla andra lappar i gruppen.
+              </div>
+              <div className="flex gap-1.5">
+                {allNotes && onSelectMultiple && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const groupMembers = allNotes.filter((n) => n.groupId === note.groupId).map((n) => n.id);
+                      onSelectMultiple(groupMembers);
+                    }}
+                    className="flex-1 py-1 px-2 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[10px] font-bold border border-slate-700 cursor-pointer"
+                  >
+                    Välj alla i gruppen
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onUngroupStickyNotes && note.groupId) {
+                      onUngroupStickyNotes(note.groupId);
+                      setShowGroupDrawer(false);
+                    }
+                  }}
+                  className="flex-1 py-1 px-2 bg-rose-950/80 hover:bg-rose-900 text-rose-200 rounded-lg text-[10px] font-bold border border-rose-800/80 cursor-pointer"
+                >
+                  Dela upp grupp
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {selectedNoteIds && selectedNoteIds.length >= 2 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onGroupStickyNotes) {
+                      onGroupStickyNotes(selectedNoteIds);
+                      setShowGroupDrawer(false);
+                    }
+                  }}
+                  className="w-full py-1.5 px-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Boxes className="w-3.5 h-3.5 fill-slate-950" />
+                  <span>Gruppera alla {selectedNoteIds.length} markerade lappar</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onGroupStickyNotes && allNotes) {
+                      const nearby = allNotes.filter((n) => {
+                        if (n.id === note.id) return false;
+                        const dx = n.x - note.x;
+                        const dy = n.y - note.y;
+                        return Math.hypot(dx, dy) < 400;
+                      });
+                      const idsToGroup = [note.id, ...nearby.map((n) => n.id)];
+                      if (idsToGroup.length >= 2) {
+                        onGroupStickyNotes(idsToGroup);
+                      } else {
+                        const allIds = allNotes.map((n) => n.id);
+                        if (allIds.length >= 2) {
+                          onGroupStickyNotes(allIds);
+                        }
+                      }
+                      setShowGroupDrawer(false);
+                    }
+                  }}
+                  className="w-full py-1.5 px-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                  <span>⚡ Gruppera med närliggande lappar</span>
+                </button>
+              )}
+
+              <div className="text-[9px] text-amber-300/90 flex items-center gap-1 font-sans pt-0.5">
+                <span>💡 Tips: Håll [Shift] och klicka på flera lappar för att markera dem.</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Note Body (Rubrikfält & Text Area) */}
       <div
         className="p-2.5 flex-1 flex flex-col gap-2 min-h-0 relative"
@@ -728,7 +1875,17 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             value={titleInput}
             onChange={handleTitleChange}
             placeholder="Rubrik (namnge anteckning)..."
-            className={`w-full bg-transparent outline-none font-bold text-xs tracking-tight ${theme.titleColor} placeholder:opacity-50`}
+            style={{
+              fontFamily: fontFamilyCss,
+              fontSize: `${currentTitleFontSize}px`,
+              fontWeight: 700,
+              fontStyle: currentFontStyle,
+              textAlign: currentTextAlign,
+              color: note.textColorCustom || undefined,
+            }}
+            className={`w-full bg-transparent outline-none tracking-tight ${
+              note.textColorCustom ? '' : theme.titleColor
+            } placeholder:opacity-50`}
           />
           {titleInput ? (
             <button
@@ -738,7 +1895,10 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
                 onUpdate({
                   ...note,
                   title: '',
-                  updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  updatedAt: new Date().toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
                 });
                 titleInputRef.current?.focus();
               }}
@@ -750,16 +1910,312 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
           ) : null}
         </div>
 
-        {/* Text Area */}
-        <textarea
-          value={textInput}
-          onChange={handleTextChange}
-          placeholder="Skriv anteckningar, IP-planering, VLAN..."
-          className={`w-full flex-1 bg-transparent resize-none outline-none font-sans text-xs leading-relaxed font-semibold ${theme.textColor}`}
-        />
+        {/* Quick Typography Controls Strip: Font Family (Mono vs Sans vs Hand), Alignment (Left/Center/Right), Text Color */}
+        <div className="px-2.5 py-1 flex items-center justify-between gap-1 border-b border-current/15 bg-black/10 text-[10px] shrink-0">
+          {/* Teckensnittsfamilj: Sans vs Monospace vs Handskrift */}
+          <div className="flex items-center gap-0.5 bg-black/20 p-0.5 rounded-md border border-current/15">
+            <button
+              type="button"
+              onClick={() => handleSetFontFamily('sans')}
+              title="Sans-serif: Plus Jakarta Sans (Modern & Ren)"
+              className={`px-1.5 py-0.5 rounded text-[9px] font-sans font-bold transition cursor-pointer ${
+                currentFontFamily === 'sans'
+                  ? isYellow ? 'bg-amber-400 text-amber-950 shadow-sm' : 'bg-white text-slate-950 shadow-sm'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              Sans
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetFontFamily('mono')}
+              title="Monospace: JetBrains Mono (Perfekt för IP, Subnät & Kod)"
+              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition cursor-pointer flex items-center gap-0.5 ${
+                currentFontFamily === 'mono'
+                  ? isYellow ? 'bg-amber-400 text-amber-950 shadow-sm ring-1 ring-amber-300' : 'bg-white text-slate-950 shadow-sm'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <span className="text-[8px]">&gt;_</span>
+              <span>Mono</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetFontFamily('handwriting')}
+              title="Handskrift: Caveat (Klassisk Post-it stil)"
+              className={`px-1.5 py-0.5 rounded text-[9px] font-caveat font-bold transition cursor-pointer ${
+                currentFontFamily === 'handwriting'
+                  ? isYellow ? 'bg-amber-400 text-amber-950 shadow-sm' : 'bg-white text-slate-950 shadow-sm'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              Hand
+            </button>
+          </div>
 
-        {/* Quick Insert Templates Toolbar & Live Size Indicator */}
+          {/* Textjustering: Vänster, Center, Höger */}
+          <div className="flex items-center gap-0.5 bg-black/20 p-0.5 rounded-md border border-current/15">
+            <button
+              type="button"
+              onClick={() => handleSetTextAlign('left')}
+              title="Vänsterjustera text"
+              className={`p-1 rounded transition cursor-pointer ${
+                currentTextAlign === 'left'
+                  ? isYellow ? 'bg-amber-400 text-amber-950 shadow-sm' : 'bg-white text-slate-950 shadow-sm'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <AlignLeft className="w-2.5 h-2.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetTextAlign('center')}
+              title="Centrera text"
+              className={`p-1 rounded transition cursor-pointer ${
+                currentTextAlign === 'center'
+                  ? isYellow ? 'bg-amber-400 text-amber-950 shadow-sm' : 'bg-white text-slate-950 shadow-sm'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <AlignCenter className="w-2.5 h-2.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetTextAlign('right')}
+              title="Högerjustera text"
+              className={`p-1 rounded transition cursor-pointer ${
+                currentTextAlign === 'right'
+                  ? isYellow ? 'bg-amber-400 text-amber-950 shadow-sm' : 'bg-white text-slate-950 shadow-sm'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <AlignRight className="w-2.5 h-2.5" />
+            </button>
+          </div>
+
+          {/* Textfärg: Snabbpalett & Färgväljare */}
+          <div className="flex items-center gap-1">
+            {[
+              { hex: undefined, label: 'Auto' },
+              { hex: '#0f172a', label: 'Kolsvart' },
+              { hex: '#ffffff', label: 'Snövit' },
+              { hex: '#06b6d4', label: 'Cyber Cyan' },
+              { hex: '#10b981', label: 'Smaragdgrön' },
+              { hex: '#f59e0b', label: 'Bärnsten' },
+            ].map((c, i) => {
+              const isSel = c.hex === undefined ? !note.textColorCustom : note.textColorCustom === c.hex;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSetTextColor(c.hex)}
+                  title={`Textfärg: ${c.label}`}
+                  className={`w-3.5 h-3.5 rounded-full border transition cursor-pointer ${
+                    isSel
+                      ? 'ring-1.5 ring-white scale-110 shadow-sm'
+                      : 'border-white/30 opacity-75 hover:opacity-100'
+                  } ${c.hex === undefined ? (isYellow ? 'bg-amber-950' : 'bg-slate-300') : ''}`}
+                  style={c.hex ? { backgroundColor: c.hex } : undefined}
+                />
+              );
+            })}
+
+            {/* Custom native color picker */}
+            <label
+              title="Välj anpassad textfärg"
+              className="relative w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-tr from-rose-500 via-amber-400 to-cyan-400 cursor-pointer flex items-center justify-center shrink-0 overflow-hidden hover:scale-110 transition shadow-sm"
+            >
+              <input
+                type="color"
+                value={note.textColorCustom || '#f59e0b'}
+                onChange={(e) => handleSetTextColor(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Content Body: Todo Checklist Mode OR Text Area Mode */}
+        {currentMode === 'todo' ? (
+          <div className="flex-1 min-h-0 flex flex-col gap-1.5 overflow-hidden">
+            {/* Checklist Progress & Quick Actions Header */}
+            <div className="flex items-center justify-between gap-1 px-1 py-0.5 text-[10px] shrink-0 border-b border-current/10">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="font-mono font-bold text-[10px] shrink-0">
+                  {completedTodoCount} av {totalTodoCount} klara ({todoProgressPercent}%)
+                </span>
+                <div className="w-16 h-1.5 bg-black/20 rounded-full overflow-hidden shrink-0 border border-current/20">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      todoProgressPercent === 100
+                        ? 'bg-emerald-400'
+                        : isYellow
+                        ? 'bg-amber-600'
+                        : 'bg-cyan-400'
+                    }`}
+                    style={{ width: `${todoProgressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                {/* Toggle All Checkboxes */}
+                <button
+                  type="button"
+                  onClick={handleToggleAllTodos}
+                  title={
+                    completedTodoCount === totalTodoCount && totalTodoCount > 0
+                      ? 'Avmarkera alla punkter'
+                      : 'Bocka av alla punkter'
+                  }
+                  className="p-1 rounded hover:bg-black/20 transition cursor-pointer flex items-center gap-0.5 text-[9px] opacity-80 hover:opacity-100"
+                >
+                  <CheckCheck className="w-3 h-3" />
+                  <span className="hidden sm:inline">
+                    {completedTodoCount === totalTodoCount && totalTodoCount > 0 ? 'Återställ' : 'Bocka alla'}
+                  </span>
+                </button>
+
+                {/* Clear Completed */}
+                {completedTodoCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearCompletedTodos}
+                    title="Rensa alla avklarade punkter"
+                    className="p-1 rounded hover:bg-black/20 text-rose-500 hover:text-rose-600 transition cursor-pointer flex items-center gap-0.5 text-[9px]"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span className="hidden sm:inline">Rensa klara</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable Todo Items List */}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-0.5">
+              {currentTodos.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-3 text-center opacity-60">
+                  <ListTodo className="w-6 h-6 mb-1 opacity-40" />
+                  <p className="text-xs font-semibold">Inga punkter ännu</p>
+                  <button
+                    type="button"
+                    onClick={() => handleAddTodo('Ny uppgift')}
+                    className="mt-2 px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Lägg till första punkten</span>
+                  </button>
+                </div>
+              ) : (
+                currentTodos.map((todo, index) => (
+                  <div
+                    key={todo.id}
+                    className={`group/todo flex items-center gap-1.5 px-1.5 py-1 rounded-lg transition-all ${
+                      todo.completed
+                        ? 'bg-black/10'
+                        : 'hover:bg-black/15 focus-within:bg-black/20'
+                    }`}
+                  >
+                    {/* Checkbox Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTodo(todo.id)}
+                      title={todo.completed ? 'Avmarkera uppgift' : 'Bocka av och stryk över uppgift'}
+                      className={`shrink-0 p-0.5 rounded transition-transform cursor-pointer active:scale-90 ${
+                        todo.completed
+                          ? 'text-emerald-500 hover:text-emerald-400'
+                          : isYellow
+                          ? 'text-amber-950/70 hover:text-amber-950'
+                          : 'text-white/70 hover:text-white'
+                      }`}
+                    >
+                      {todo.completed ? (
+                        <CheckSquare className="w-4 h-4 fill-emerald-500/20" />
+                      ) : (
+                        <Square className="w-4 h-4 opacity-70 hover:opacity-100" />
+                      )}
+                    </button>
+
+                    {/* Todo Text Input with dynamic Strikethrough when completed */}
+                    <input
+                      ref={(el) => (todoInputRefs.current[todo.id] = el)}
+                      type="text"
+                      value={todo.text}
+                      onChange={(e) => handleUpdateTodoText(todo.id, e.target.value)}
+                      onKeyDown={(e) => handleTodoKeyDown(e, todo.id, index)}
+                      placeholder="Beskriv punkt (Tryck Enter för nästa)..."
+                      style={{
+                        fontFamily: fontFamilyCss,
+                        fontSize: `${currentFontSize}px`,
+                        fontWeight: fontWeightNumeric,
+                        fontStyle: todo.completed ? 'italic' : currentFontStyle,
+                        textDecoration: todo.completed
+                          ? 'line-through'
+                          : currentTextDecoration,
+                        textAlign: currentTextAlign,
+                        color: note.textColorCustom || undefined,
+                      }}
+                      className={`flex-1 bg-transparent outline-none min-w-0 transition-opacity ${
+                        todo.completed
+                          ? 'opacity-55 line-through italic'
+                          : 'opacity-100'
+                      } ${note.textColorCustom ? '' : theme.textColor}`}
+                    />
+
+                    {/* Delete item button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTodo(todo.id)}
+                      title="Ta bort denna punkt"
+                      className="opacity-0 group-hover/todo:opacity-100 focus:opacity-100 p-0.5 rounded hover:bg-black/20 text-rose-500 transition cursor-pointer shrink-0"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              )}
+
+              {/* Quick Inline New Item Row at bottom */}
+              <div className="pt-1 flex items-center gap-1.5 px-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAddTodo('')}
+                  title="Lägg till ny punkt i checklistan"
+                  className={`w-full py-1 px-2 rounded-lg border border-dashed border-current/30 hover:border-current/60 hover:bg-black/15 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer opacity-80 hover:opacity-100 active:scale-98`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Lägg till punkt</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Text Area with full typography styles applied */
+          <textarea
+            value={textInput}
+            onChange={handleTextChange}
+            onFocus={() => onSelect?.(note.id)}
+            onClick={() => onSelect?.(note.id)}
+            placeholder="Skriv anteckningar, IP-planering, VLAN, checklistor..."
+            style={{
+              fontFamily: fontFamilyCss,
+              fontSize: `${currentFontSize}px`,
+              fontWeight: fontWeightNumeric,
+              fontStyle: currentFontStyle,
+              textDecoration: currentTextDecoration,
+              textAlign: currentTextAlign,
+              lineHeight: lineHeightNumeric,
+              color: note.textColorCustom || undefined,
+            }}
+            className={`w-full flex-1 bg-transparent resize-none outline-none custom-scrollbar ${
+              note.textColorCustom ? '' : theme.textColor
+            }`}
+          />
+        )}
+
+        {/* Bottom Toolbar: Templates, Quick Font Stepper & Dimension Indicator */}
         <div className="pt-1.5 border-t border-current/15 flex items-center justify-between gap-1 text-[10px] shrink-0">
+          {/* Quick Insert Templates */}
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             <span className="font-mono font-extrabold opacity-70 flex items-center gap-0.5 text-[9px] shrink-0">
               <Sparkles className="w-2.5 h-2.5" /> Mallar:
@@ -798,20 +2254,56 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             </button>
           </div>
 
-          {/* Timestamp / Live Dimension Indicator */}
-          <div className="text-[9px] font-mono opacity-70 flex items-center justify-end gap-1 shrink-0">
-            {isResizing && liveDimensions ? (
-              <span className="font-bold text-cyan-400 bg-black/40 px-1 rounded">
-                {liveDimensions.width} × {liveDimensions.height}px
-              </span>
-            ) : (
-              note.updatedAt && (
-                <span className="flex items-center gap-0.5 opacity-80">
-                  <Clock className="w-2.5 h-2.5" />
-                  <span>{note.updatedAt}</span>
+          {/* Quick Font Size Controls & Live Dimension/Timestamp */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Quick 1-tap font size steppers */}
+            <div className="flex items-center gap-0.5 bg-black/20 px-1 py-0.5 rounded border border-current/15">
+              <button
+                type="button"
+                onClick={() => handleStepFontSize(-1)}
+                title="Minska textstorlek (A-)"
+                className="w-4 h-4 rounded hover:bg-current/10 flex items-center justify-center font-mono font-black text-[9px] transition cursor-pointer"
+              >
+                -
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFontSettings(!showFontSettings);
+                  setShowSettings(false);
+                  setShowSizePicker(false);
+                  setShowColorPicker(false);
+                }}
+                title={`Klicka för typsnittsinställningar (${selectedFontOption.label}, ${currentFontSize}px)`}
+                className="font-mono font-black text-[9px] px-1 hover:underline cursor-pointer flex items-center gap-0.5"
+              >
+                <span>{currentFontSize}px</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStepFontSize(1)}
+                title="Öka textstorlek (A+)"
+                className="w-4 h-4 rounded hover:bg-current/10 flex items-center justify-center font-mono font-black text-[9px] transition cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Timestamp / Live Dimension Indicator */}
+            <div className="text-[9px] font-mono opacity-70 flex items-center justify-end gap-1">
+              {isResizing && liveDimensions ? (
+                <span className="font-bold text-cyan-400 bg-black/40 px-1 rounded">
+                  {liveDimensions.width} × {liveDimensions.height}px
                 </span>
-              )
-            )}
+              ) : (
+                note.updatedAt && (
+                  <span className="flex items-center gap-0.5 opacity-80" title={`Senast uppdaterad: ${note.updatedAt}`}>
+                    <Clock className="w-2.5 h-2.5" />
+                    <span>{note.updatedAt}</span>
+                  </span>
+                )
+              )}
+            </div>
           </div>
         </div>
       </div>
