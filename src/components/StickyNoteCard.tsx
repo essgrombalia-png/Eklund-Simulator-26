@@ -30,6 +30,7 @@ import {
   FileText,
   CheckCheck,
   Boxes,
+  ZoomIn,
 } from 'lucide-react';
 import {
   StickyNote,
@@ -287,6 +288,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   const [titleInput, setTitleInput] = useState(note.title || '');
   const [textInput, setTextInput] = useState(note.text || '');
   const [isResizing, setIsResizing] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [liveDimensions, setLiveDimensions] = useState<{ width: number; height: number } | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -322,6 +324,27 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   const currentWidth = liveDimensions?.width ?? (note.width || 240);
   const currentHeight = liveDimensions?.height ?? (note.height || 180);
   const currentOpacity = typeof note.opacity === 'number' ? note.opacity : 1;
+
+  // Hover expansion mode & scale for crystal clear readability:
+  // Dynamically adapts based on canvas zoom so notes remain effortlessly legible even when zoomed out.
+  const hoverMode = note.hoverExpandMode || 'auto';
+  const isHoverExpansionActive = hoverMode !== 'off';
+  const hoverScale =
+    hoverMode === 'large'
+      ? 1.18
+      : zoom < 0.6
+      ? 1.16
+      : zoom < 0.85
+      ? 1.11
+      : 1.07;
+  const isCurrentlyHoverExpanded = isHovered && !isResizing && isHoverExpansionActive;
+
+  const handleSetHoverExpandMode = (mode: 'auto' | 'large' | 'off') => {
+    onUpdate({
+      ...note,
+      hoverExpandMode: mode,
+    });
+  };
 
   // Typography state derived from note or defaults
   const currentFontSize = note.fontSize || 13;
@@ -745,6 +768,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
       startHeight: startH,
       direction,
     };
+    setIsHovered(false);
     setIsResizing(true);
     setLiveDimensions({ width: startW, height: startH });
 
@@ -884,28 +908,56 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         e.stopPropagation();
         onSelect?.(note.id);
       }}
+      onMouseEnter={() => {
+        if (!isResizing) {
+          setIsHovered(true);
+        }
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+      }}
       style={{
         position: 'absolute',
         left: note.x,
         top: note.y,
         width: currentWidth,
         height: currentHeight,
-        opacity: currentOpacity,
-        zIndex: isHighlighted ? 60 : isSelected ? 50 : note.isImportant ? 40 : 20,
+        opacity: isCurrentlyHoverExpanded ? Math.max(0.96, currentOpacity) : currentOpacity,
+        transform: isHighlighted
+          ? 'scale(1.06)'
+          : isCurrentlyHoverExpanded
+          ? `scale(${hoverScale})`
+          : isSelected
+          ? 'scale(1.02)'
+          : note.isImportant
+          ? 'scale(1.005)'
+          : 'scale(1)',
+        zIndex: isHighlighted
+          ? 60
+          : isSelected
+          ? 50
+          : isCurrentlyHoverExpanded
+          ? 45
+          : note.isImportant
+          ? 40
+          : 20,
+        transformOrigin: 'center center',
       }}
       className={`group rounded-2xl border ${theme.cardBg} ${theme.shadow} ${
         isHighlighted
-          ? 'ring-4 ring-cyan-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_50px_rgba(6,182,212,0.95)] scale-[1.04] animate-pulse'
+          ? 'ring-4 ring-cyan-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_50px_rgba(6,182,212,0.95)] animate-pulse'
           : isSelected
-          ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.5)] scale-[1.01]'
+          ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.5)]'
+          : isCurrentlyHoverExpanded
+          ? 'ring-2 ring-amber-400/90 shadow-[0_24px_50px_rgba(0,0,0,0.5)]'
           : note.isImportant
-          ? 'ring-2 ring-red-500/80 shadow-[0_0_25px_rgba(239,68,68,0.55)] scale-[1.005]'
+          ? 'ring-2 ring-red-500/80 shadow-[0_0_25px_rgba(239,68,68,0.55)]'
           : note.groupId
           ? 'ring-1 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
           : ''
       } ${
-        isResizing ? 'ring-2 ring-cyan-400 shadow-2xl scale-[1.01]' : ''
-      } transition-all duration-75 overflow-hidden flex flex-col select-none`}
+        isResizing ? 'ring-2 ring-cyan-400 shadow-2xl' : ''
+      } transition-all duration-200 ease-out overflow-hidden flex flex-col select-none`}
     >
       {/* Tape / Important Pin Decorative Badge at Top */}
       {note.isImportant ? (
@@ -925,12 +977,14 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         onMouseDown={(e) => {
           onSelect?.(note.id, e);
           if (!note.isPinned) {
+            setIsHovered(false);
             onDragStart(e, note.id);
           }
         }}
         onTouchStart={(e) => {
           onSelect?.(note.id, e);
           if (!note.isPinned) {
+            setIsHovered(false);
             onDragStart(e, note.id);
           }
         }}
@@ -1742,6 +1796,48 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
               </>
             )}
           </button>
+
+          {/* Hover Expansion Readability Setting */}
+          <div className="flex flex-col gap-1.5 pt-1.5 border-t border-current/15">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-mono font-bold opacity-85 flex items-center gap-1 text-[10px]">
+                <ZoomIn className="w-3 h-3 text-amber-400" /> Hover-förstoring (Läsbarhet):
+              </span>
+              <span className="font-mono font-extrabold text-[9.5px] opacity-80">
+                {hoverMode === 'off'
+                  ? 'Avaktiverad'
+                  : hoverMode === 'large'
+                  ? 'Extra stor (+18%)'
+                  : `Auto (+${Math.round((hoverScale - 1) * 100)}%)`}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { key: 'auto', label: 'Auto (Zoom)', desc: 'Skalar +7% till +16% anpassat efter zoom' },
+                { key: 'large', label: 'Extra stor', desc: '+18% fast förstoring' },
+                { key: 'off', label: 'Av', desc: 'Ingen förstoring vid hover' },
+              ].map((opt) => {
+                const isSelected = (note.hoverExpandMode || 'auto') === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => handleSetHoverExpandMode(opt.key as any)}
+                    title={opt.desc}
+                    className={`py-1 px-1 rounded text-center font-bold text-[9px] transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-white text-slate-950 shadow-sm scale-[1.02]'
+                        : isYellow
+                        ? 'bg-amber-400/40 hover:bg-amber-400/80 text-amber-950'
+                        : 'bg-white/10 hover:bg-white/20 text-white'
+                    }`}
+                  >
+                    <div>{opt.label}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -2365,11 +2461,19 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
               </button>
             </div>
 
-            {/* Timestamp / Live Dimension Indicator */}
+            {/* Timestamp / Live Dimension / Hover Readability Mode Indicator */}
             <div className="text-[9px] font-mono opacity-70 flex items-center justify-end gap-1">
               {isResizing && liveDimensions ? (
                 <span className="font-bold text-cyan-400 bg-black/40 px-1 rounded">
                   {liveDimensions.width} × {liveDimensions.height}px
+                </span>
+              ) : isCurrentlyHoverExpanded ? (
+                <span
+                  className="font-bold text-amber-300 bg-black/50 px-1.5 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-sm"
+                  title="Hover-expanderad för förbättrad läsbarhet"
+                >
+                  <Eye className="w-2.5 h-2.5 text-amber-400" />
+                  <span>+{Math.round((hoverScale - 1) * 100)}%</span>
                 </span>
               ) : (
                 note.updatedAt && (

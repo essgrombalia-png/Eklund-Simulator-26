@@ -302,6 +302,7 @@ export interface StickyNote {
   textDecoration?: StickyNoteTextDecoration; // none, underline, line-through
   lineHeight?: StickyNoteLineHeight; // tight, normal, relaxed
   textColorCustom?: string; // Optional custom text color hex
+  hoverExpandMode?: 'auto' | 'large' | 'off'; // Hover expansion for enhanced legibility: 'auto' (+7% to +15% based on canvas zoom), 'large' (+18%), or 'off'
 }
 
 export interface ScenarioPreset {
