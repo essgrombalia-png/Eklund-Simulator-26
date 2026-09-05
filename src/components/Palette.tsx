@@ -576,6 +576,8 @@ export const CATEGORY_THEMES: Record<
 interface PaletteProps {
   onAddDevice: (type: DeviceType) => void;
   onAddStickyNote?: (x?: number, y?: number, text?: string, color?: StickyNoteColor, title?: string) => void;
+  onOpenStickyNotesList?: () => void;
+  stickyNotesCount?: number;
   activeCableType?: CableType;
   onSelectCableType?: (type: CableType) => void;
   isCollapsed?: boolean;
@@ -585,6 +587,8 @@ interface PaletteProps {
 export const Palette: React.FC<PaletteProps> = ({
   onAddDevice,
   onAddStickyNote,
+  onOpenStickyNotesList,
+  stickyNotesCount = 0,
   activeCableType = 'auto',
   onSelectCableType,
   isCollapsed,
@@ -684,7 +688,19 @@ export const Palette: React.FC<PaletteProps> = ({
                 <StickyNoteIcon className="w-3.5 h-3.5 text-amber-400" />
                 <span>Nätverksdokumentation</span>
               </div>
-              <span className="text-[9.5px] text-amber-400/90 font-mono font-semibold">Post-its</span>
+              {onOpenStickyNotesList ? (
+                <button
+                  type="button"
+                  onClick={onOpenStickyNotesList}
+                  title="Öppna lista över alla Post-it anteckningar"
+                  className="text-[9.5px] text-amber-400 hover:text-amber-200 font-mono font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 transition cursor-pointer flex items-center gap-1"
+                >
+                  <Layers className="w-2.5 h-2.5" />
+                  <span>Lista ({stickyNotesCount})</span>
+                </button>
+              ) : (
+                <span className="text-[9.5px] text-amber-400/90 font-mono font-semibold">Post-its</span>
+              )}
             </div>
             <div className="grid grid-cols-7 gap-1">
               {(['yellow', 'cyan', 'emerald', 'rose', 'amber', 'purple', 'blue'] as StickyNoteColor[]).map((c) => {

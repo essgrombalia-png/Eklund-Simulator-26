@@ -32,6 +32,7 @@ import {
   Search,
   X,
   Waves,
+  StickyNote,
 } from 'lucide-react';
 import { ScenarioPreset, UserProfile, SimulatorThemeId, Device } from '../types';
 import { SCENARIOS } from '../data/scenarios';
@@ -86,6 +87,8 @@ interface TopbarProps {
   backgroundNoiseEnabled?: boolean;
   onToggleBackgroundNoise?: () => void;
   noisePacketsCount?: number;
+  onOpenStickyNotesList?: () => void;
+  stickyNotesCount?: number;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -106,6 +109,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenAntivirus,
   onOpenIncidentResponse,
   onOpenSettings,
+  onOpenStickyNotesList,
+  stickyNotesCount = 0,
   incidentCount = 0,
   issueCount = 0,
   onResetDemo,
@@ -921,6 +926,30 @@ export const Topbar: React.FC<TopbarProps> = ({
                       <span className="text-[10px] text-slate-400">Spara & ladda JSON-topologi</span>
                     </div>
                   </button>
+
+                  {onOpenStickyNotesList && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolsMenuOpen(false);
+                        onOpenStickyNotesList();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-xs text-slate-200 hover:bg-amber-950/40 hover:text-amber-300 transition group cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        <StickyNote className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-semibold flex items-center justify-between">
+                          <span>Post-it Lappar</span>
+                          <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
+                            {stickyNotesCount} st
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">Översiktslista, sök & fokusering</span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               </div>
             )}

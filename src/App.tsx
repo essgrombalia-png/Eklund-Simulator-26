@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Topbar } from './components/Topbar';
 import { Palette } from './components/Palette';
 import { Canvas } from './components/Canvas';
 import { Inspector } from './components/Inspector';
+import { FloatingStickyNotesWindow } from './components/FloatingStickyNotesWindow';
 import { DeviceTerminal } from './components/DeviceTerminal';
 import { PacketInspector } from './components/PacketInspector';
 import { NetworkStats } from './components/NetworkStats';
@@ -82,7 +83,6 @@ import { playSound } from './utils/audioSynth';
 import { optimizeNetworkLayout } from './utils/d3Layout';
 import { Play, ArrowRight, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles, Zap, Wrench, Skull, ShieldAlert, ChevronRight, ChevronLeft, Terminal } from 'lucide-react';
 import { useHistory } from './hooks/useHistory';
-import { useRef } from 'react';
 
 export default function App() {
   const [currentScenarioId, setCurrentScenarioId] = useState<string>('custom');
@@ -272,6 +272,28 @@ export default function App() {
     setSelectedStickyNoteIds((current) => current.filter((noteId) => noteId !== id));
     updateTopology({ stickyNotes: (prev) => prev.filter((n) => n.id !== id) }, 'Tog bort Post-it');
   };
+
+  // Dedicated Floating Post-it Window & Focus System State
+  const [showFloatingStickyNotes, setShowFloatingStickyNotes] = useState(false);
+  const [showStickyNotesInspectorOnly, setShowStickyNotesInspectorOnly] = useState(false);
+  const focusStickyNoteRef = useRef<((id: string) => void) | null>(null);
+
+  const handleFocusOnStickyNote = useCallback((id: string) => {
+    // 1. Select the sticky note
+    setSelectedStickyNoteId(id);
+    setSelectedStickyNoteIds([id]);
+    setSelectedNodeId(null);
+    setSelectedNodeIds([]);
+    setSelectedLinkId(null);
+    setSelectedContainerId(null);
+
+    // 2. Invoke camera focus on Canvas
+    if (focusStickyNoteRef.current) {
+      focusStickyNoteRef.current(id);
+    } else {
+      window.dispatchEvent(new CustomEvent('canvas-focus-sticky-note', { detail: { id } }));
+    }
+  }, []);
 
   // Backwards compatible state-setters for any other component calls
   const setNodes = (newNodesVal: Device[] | ((prev: Device[]) => Device[])) => {
@@ -1564,6 +1586,8 @@ export default function App() {
         onOpenAntivirus={() => setShowAntivirusModal(true)}
         onOpenIncidentResponse={() => setShowIncidentModal(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenStickyNotesList={() => setShowFloatingStickyNotes(true)}
+        stickyNotesCount={stickyNotes.length}
         incidentCount={incidents.length}
         issueCount={detectedIssues.length}
         onResetDemo={() => {
@@ -1629,6 +1653,8 @@ export default function App() {
               <Palette
                 onAddDevice={handleAddDevice}
                 onAddStickyNote={handleAddStickyNote}
+                onOpenStickyNotesList={() => setShowFloatingStickyNotes(true)}
+                stickyNotesCount={stickyNotes.length}
                 activeCableType={activeCableType}
                 onSelectCableType={setActiveCableType}
                 isCollapsed={isPaletteCollapsed}
@@ -1764,6 +1790,7 @@ export default function App() {
               onQuickStart={handleQuickStart}
               onSelectScenarioPreset={handleSelectScenarioPreset}
               isPaletteCollapsed={isPaletteCollapsed}
+              onFocusStickyNoteRef={focusStickyNoteRef}
             />
           )}
 
@@ -1827,7 +1854,7 @@ export default function App() {
         </div>
 
         {/* Right Inspector Drawer */}
-        {activeTab === 'canvas' && (selectedNode || selectedLink || selectedContainer || selectedStickyNotes.length > 0) && (
+        {activeTab === 'canvas' && (selectedNode || selectedLink || selectedContainer || selectedStickyNotes.length > 0 || showStickyNotesInspectorOnly) && (
           <>
             {/* Backdrop for iPad/mobile when Inspector is open */}
             <div
@@ -1839,6 +1866,7 @@ export default function App() {
                 setSelectedContainerId(null);
                 setSelectedStickyNoteId(null);
                 setSelectedStickyNoteIds([]);
+                setShowStickyNotesInspectorOnly(false);
               }}
             />
             <Inspector
@@ -1857,6 +1885,7 @@ export default function App() {
                 setSelectedContainerId(null);
                 setSelectedStickyNoteId(null);
                 setSelectedStickyNoteIds([]);
+                setShowStickyNotesInspectorOnly(false);
               }}
               onUpdateNode={handleUpdateNode}
               onUpdateMultipleNodes={handleUpdateMultipleNodes}
@@ -1876,6 +1905,10 @@ export default function App() {
               onGroupStickyNotes={handleGroupStickyNotes}
               onUngroupStickyNotes={handleUngroupStickyNotes}
               onSelectMultipleStickyNotes={setSelectedStickyNoteIds}
+              onFocusStickyNote={handleFocusOnStickyNote}
+              onAddStickyNote={handleAddStickyNote}
+              onOpenFloatingStickyNotes={() => setShowFloatingStickyNotes(true)}
+              showStickyNotesListOnly={showStickyNotesInspectorOnly}
             />
           </>
         )}
@@ -2187,6 +2220,35 @@ export default function App() {
           setSelectedNodeIds([id]);
         }}
         onOpenAntivirus={() => setShowAntivirusModal(true)}
+      />
+
+      {/* Floating Sticky Notes List & Navigation Window */}
+      <FloatingStickyNotesWindow
+        isOpen={showFloatingStickyNotes}
+        onClose={() => setShowFloatingStickyNotes(false)}
+        stickyNotes={stickyNotes}
+        selectedStickyNoteId={selectedStickyNoteId}
+        selectedStickyNoteIds={selectedStickyNoteIds}
+        onFocusNote={handleFocusOnStickyNote}
+        onSelectNote={(id) => {
+          setSelectedStickyNoteId(id);
+          setSelectedStickyNoteIds([id]);
+          setSelectedNodeId(null);
+          setSelectedNodeIds([]);
+          setSelectedLinkId(null);
+          setSelectedContainerId(null);
+        }}
+        onEditNote={(note) => {
+          setSelectedStickyNoteId(note.id);
+          setSelectedStickyNoteIds([note.id]);
+          setSelectedNodeId(null);
+          setSelectedNodeIds([]);
+          setSelectedLinkId(null);
+          setSelectedContainerId(null);
+        }}
+        onUpdateNote={handleUpdateStickyNote}
+        onDeleteNote={handleDeleteStickyNote}
+        onAddStickyNote={handleAddStickyNote}
       />
 
       {/* Global Simulator Settings & Profile Modal */}

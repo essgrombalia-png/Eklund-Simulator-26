@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ZoomIn,
   ZoomOut,
@@ -133,6 +133,8 @@ interface CanvasProps {
   currentThemeId?: SimulatorThemeId;
   isLightMode?: boolean;
   isPaletteCollapsed?: boolean;
+  onFocusStickyNoteRef?: React.MutableRefObject<((noteId: string) => void) | null>;
+  registerFocusStickyNote?: (fn: (noteId: string) => void) => void;
 }
 
 // Convert dotted-decimal subnet mask to CIDR prefix (e.g., 255.255.255.0 -> /24)
@@ -325,6 +327,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   currentThemeId,
   isLightMode,
   isPaletteCollapsed = false,
+  onFocusStickyNoteRef,
+  registerFocusStickyNote,
 }) => {
   const isLight = isLightMode || currentThemeId === 'blueprint_light';
   const [internalDebugger, setInternalDebugger] = useState(false);
@@ -872,6 +876,58 @@ export const Canvas: React.FC<CanvasProps> = ({
       setFocusModePreviousView(null);
     }
   };
+
+  // Dedicated Focus handler for Sticky Notes: Centers and zooms view on the note with a glowing pulse highlight
+  const [highlightedStickyNoteId, setHighlightedStickyNoteId] = useState<string | null>(null);
+
+  const handleFocusOnStickyNote = useCallback((noteId: string) => {
+    const note = stickyNotes.find((n) => n.id === noteId);
+    if (!note || !containerRef.current) return;
+
+    const containerW = containerRef.current.clientWidth || 1000;
+    const containerH = containerRef.current.clientHeight || 700;
+
+    const noteW = note.width || 240;
+    const noteH = note.height || 180;
+    const centerX = note.x + noteW / 2;
+    const centerY = note.y + noteH / 2;
+
+    const targetZoom = Math.min(Math.max(zoom, 1.15), 1.4);
+
+    setZoom(+targetZoom.toFixed(2));
+    setPan({
+      x: Math.round(containerW / 2 - centerX * targetZoom),
+      y: Math.round(containerH / 2 - centerY * targetZoom),
+    });
+
+    handleSelectStickyNote(noteId);
+    setHighlightedStickyNoteId(noteId);
+    setTimeout(() => {
+      setHighlightedStickyNoteId((prev) => (prev === noteId ? null : prev));
+    }, 3200);
+  }, [stickyNotes, zoom, handleSelectStickyNote]);
+
+  useEffect(() => {
+    if (onFocusStickyNoteRef) {
+      onFocusStickyNoteRef.current = handleFocusOnStickyNote;
+    }
+  }, [onFocusStickyNoteRef, handleFocusOnStickyNote]);
+
+  useEffect(() => {
+    if (registerFocusStickyNote) {
+      registerFocusStickyNote(handleFocusOnStickyNote);
+    }
+  }, [registerFocusStickyNote, handleFocusOnStickyNote]);
+
+  useEffect(() => {
+    const handleEvent = (e: any) => {
+      if (e?.detail?.id) {
+        handleFocusOnStickyNote(e.detail.id);
+      }
+    };
+    window.addEventListener('canvas-focus-sticky-note', handleEvent);
+    return () => window.removeEventListener('canvas-focus-sticky-note', handleEvent);
+  }, [handleFocusOnStickyNote]);
 
   // Draggable Toolbar Event Handlers (Mouse & Touch)
   const handleToolbarMouseDown = (e: React.MouseEvent) => {
@@ -3641,6 +3697,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               note={note}
               zoom={zoom}
               isSelected={isNoteSelected}
+              isHighlighted={highlightedStickyNoteId === note.id}
               allNotes={stickyNotes}
               selectedNoteIds={currentSelectedStickyNoteIds}
               onGroupStickyNotes={onGroupStickyNotes}

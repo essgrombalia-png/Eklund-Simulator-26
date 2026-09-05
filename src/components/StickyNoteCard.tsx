@@ -48,6 +48,7 @@ export interface StickyNoteCardProps {
   note: StickyNote;
   zoom: number;
   isSelected?: boolean;
+  isHighlighted?: boolean;
   onSelect?: (id: string, e?: React.MouseEvent | React.TouchEvent) => void;
   onUpdate: (note: StickyNote) => void;
   onDelete: (id: string) => void;
@@ -267,6 +268,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   note,
   zoom,
   isSelected = false,
+  isHighlighted = false,
   onSelect,
   onUpdate,
   onDelete,
@@ -889,10 +891,12 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         width: currentWidth,
         height: currentHeight,
         opacity: currentOpacity,
-        zIndex: isSelected ? 50 : note.isImportant ? 40 : 20,
+        zIndex: isHighlighted ? 60 : isSelected ? 50 : note.isImportant ? 40 : 20,
       }}
       className={`group rounded-2xl border ${theme.cardBg} ${theme.shadow} ${
-        isSelected
+        isHighlighted
+          ? 'ring-4 ring-cyan-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_50px_rgba(6,182,212,0.95)] scale-[1.04] animate-pulse'
+          : isSelected
           ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.5)] scale-[1.01]'
           : note.isImportant
           ? 'ring-2 ring-red-500/80 shadow-[0_0_25px_rgba(239,68,68,0.55)] scale-[1.005]'

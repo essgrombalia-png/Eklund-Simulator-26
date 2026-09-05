@@ -65,8 +65,11 @@ import {
   AlignRight,
   Grid,
   Pin,
+  Target,
+  Edit3,
 } from 'lucide-react';
 import { Device, Link, FirewallRule, DnsRecord, CableType, NetworkContainer, IotRule, IotRuleTrigger, IotRuleAction, StickyNote, StickyNoteColor } from '../types';
+import { StickyNotesList } from './StickyNotesList';
 import { detectNodeWarnings } from '../utils/networkEngine';
 import {
   CABLE_DEFINITIONS,
@@ -114,6 +117,10 @@ interface InspectorProps {
   onGroupStickyNotes?: (noteIds: string[], groupName?: string) => void;
   onUngroupStickyNotes?: (groupIdOrNoteIds: string | string[]) => void;
   onSelectMultipleStickyNotes?: (ids: string[]) => void;
+  onFocusStickyNote?: (id: string) => void;
+  onAddStickyNote?: () => void;
+  onOpenFloatingStickyNotes?: () => void;
+  showStickyNotesListOnly?: boolean;
 }
 
 export const Inspector: React.FC<InspectorProps> = ({
@@ -145,7 +152,14 @@ export const Inspector: React.FC<InspectorProps> = ({
   onGroupStickyNotes,
   onUngroupStickyNotes,
   onSelectMultipleStickyNotes,
+  onFocusStickyNote,
+  onAddStickyNote,
+  onOpenFloatingStickyNotes,
+  showStickyNotesListOnly = false,
 }) => {
+  const [stickyNotesTab, setStickyNotesTab] = useState<'properties' | 'list'>(
+    showStickyNotesListOnly ? 'list' : 'properties'
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [quickConnectTargetId, setQuickConnectTargetId] = useState<string>('');
   const [quickConnectCableType, setQuickConnectCableType] = useState<CableType>('auto');
@@ -175,7 +189,8 @@ export const Inspector: React.FC<InspectorProps> = ({
     !selectedLink &&
     !selectedContainer &&
     !selectedStickyNote &&
-    (!selectedStickyNotes || selectedStickyNotes.length === 0)
+    (!selectedStickyNotes || selectedStickyNotes.length === 0) &&
+    !showStickyNotesListOnly
   ) {
     return null;
   }
@@ -258,17 +273,32 @@ export const Inspector: React.FC<InspectorProps> = ({
               ? 'Kabelkonfiguration'
               : selectedContainer
               ? 'Container-konfiguration'
+              : showStickyNotesListOnly || stickyNotesTab === 'list'
+              ? 'Post-it Översikt'
               : selectedStickyNotes && selectedStickyNotes.length > 1
               ? 'Post-it Gruppering'
               : 'Post-it Inspektering'}
           </h2>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 rounded-lg hover:bg-[#241c14] text-stone-400 hover:text-stone-200 transition cursor-pointer"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {stickyNotes.length > 0 && onOpenFloatingStickyNotes && (
+            <button
+              type="button"
+              onClick={onOpenFloatingStickyNotes}
+              title="Öppna flytande Post-it fönster på skärmen"
+              className="p-1 px-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[11px] font-bold flex items-center gap-1 transition cursor-pointer"
+            >
+              <StickyNoteIcon className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Flytande</span>
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-[#241c14] text-stone-400 hover:text-stone-200 transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -2849,7 +2879,7 @@ export const Inspector: React.FC<InspectorProps> = ({
         })()}
 
         {/* Dedicated Sticky Note & Sticky Note Group Inspector */}
-        {!selectedNode && !selectedLink && !selectedContainer && (selectedStickyNote || (selectedStickyNotes && selectedStickyNotes.length > 0)) && (() => {
+        {!selectedNode && !selectedLink && !selectedContainer && (selectedStickyNote || (selectedStickyNotes && selectedStickyNotes.length > 0) || showStickyNotesListOnly) && (() => {
           const activeNotes =
             selectedStickyNotes && selectedStickyNotes.length > 0
               ? selectedStickyNotes
@@ -2857,12 +2887,64 @@ export const Inspector: React.FC<InspectorProps> = ({
               ? [selectedStickyNote]
               : [];
 
-          if (activeNotes.length === 0) return null;
+          if (activeNotes.length === 0 && !showStickyNotesListOnly) return null;
 
           const isMultiple = activeNotes.length > 1;
-          const firstGroupId = activeNotes[0].groupId;
+          const firstGroupId = activeNotes[0]?.groupId;
           const allSameGroup = isMultiple && !!firstGroupId && activeNotes.every((n) => n.groupId === firstGroupId);
-          const currentGroupName = activeNotes[0].groupName || 'Post-it-grupp';
+          const currentGroupName = activeNotes[0]?.groupName || 'Post-it-grupp';
+
+          // If in list view or if no note is currently selected, render the full interactive StickyNotesList
+          if (stickyNotesTab === 'list' || activeNotes.length === 0) {
+            return (
+              <div className="space-y-4">
+                {/* Tab switcher */}
+                {activeNotes.length > 0 && (
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setStickyNotesTab('properties')}
+                      className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900 cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Egenskaper</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStickyNotesTab('list')}
+                      className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-amber-400 text-amber-950 shadow-sm cursor-pointer"
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Alla Lappar ({stickyNotes.length})</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Sticky Notes List component */}
+                <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-950/90 shadow-xl">
+                  <StickyNotesList
+                    stickyNotes={stickyNotes}
+                    selectedStickyNoteId={activeNotes[0]?.id}
+                    selectedStickyNoteIds={activeNotes.map((n) => n.id)}
+                    onFocusNote={(id) => {
+                      onFocusStickyNote?.(id);
+                    }}
+                    onSelectNote={(id) => {
+                      onSelectMultipleStickyNotes?.([id]);
+                    }}
+                    onEditNote={(note) => {
+                      onSelectMultipleStickyNotes?.([note.id]);
+                      setStickyNotesTab('properties');
+                    }}
+                    onUpdateNote={onUpdateStickyNote}
+                    onDeleteNote={onDeleteStickyNote}
+                    onAddStickyNote={onAddStickyNote}
+                    onOpenFloatingWindow={onOpenFloatingStickyNotes}
+                  />
+                </div>
+              </div>
+            );
+          }
 
           // Alignment helper
           const handleAlign = (mode: 'top' | 'left' | 'row' | 'column' | 'grid') => {
@@ -2962,6 +3044,38 @@ export const Inspector: React.FC<InspectorProps> = ({
 
           return (
             <div className="space-y-4">
+              {/* Tab Switcher */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setStickyNotesTab('properties')}
+                  className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-amber-400 text-amber-950 shadow-sm cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Egenskaper</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStickyNotesTab('list')}
+                  className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900 cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Alla Lappar ({stickyNotes.length})</span>
+                </button>
+              </div>
+
+              {/* Direct Focus on Sticky Note Button */}
+              {onFocusStickyNote && activeNotes[0] && (
+                <button
+                  type="button"
+                  onClick={() => onFocusStickyNote(activeNotes[0].id)}
+                  className="w-full py-2.5 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 hover:text-white border border-cyan-500/40 flex items-center justify-center gap-2 font-bold text-xs transition cursor-pointer shadow-sm group hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  <Target className="w-4 h-4 text-cyan-400 group-hover:rotate-45 transition-transform" />
+                  <span>Fokusera vy på denna lapp</span>
+                </button>
+              )}
+
               {/* Header Title Card */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
                 <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 shrink-0 text-amber-400">
