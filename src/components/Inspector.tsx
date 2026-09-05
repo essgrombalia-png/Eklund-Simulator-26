@@ -64,6 +64,7 @@ import {
   AlignCenter,
   AlignRight,
   Grid,
+  Pin,
 } from 'lucide-react';
 import { Device, Link, FirewallRule, DnsRecord, CableType, NetworkContainer, IotRule, IotRuleTrigger, IotRuleAction, StickyNote, StickyNoteColor } from '../types';
 import { detectNodeWarnings } from '../utils/networkEngine';
@@ -2933,6 +2934,22 @@ export const Inspector: React.FC<InspectorProps> = ({
             }
           };
 
+          const anyImportant = activeNotes.some((n) => n.isImportant);
+          const handleBatchImportant = (setImportant?: boolean) => {
+            const nextVal = typeof setImportant === 'boolean' ? setImportant : !anyImportant;
+            const updated = activeNotes.map((n) => ({
+              ...n,
+              isImportant: nextVal,
+              color: (nextVal ? 'rose' : n.color) as StickyNoteColor,
+              updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            }));
+            if (onUpdateMultipleStickyNotes) {
+              onUpdateMultipleStickyNotes(updated);
+            } else if (onUpdateStickyNote) {
+              updated.forEach((n) => onUpdateStickyNote(n));
+            }
+          };
+
           const colorOptions: Array<{ id: StickyNoteColor; label: string; bg: string }> = [
             { id: 'yellow', label: 'Gul', bg: 'bg-amber-300 border-amber-400 text-amber-950' },
             { id: 'cyan', label: 'Cyan', bg: 'bg-cyan-500 border-cyan-400 text-slate-950' },
@@ -3119,6 +3136,37 @@ export const Inspector: React.FC<InspectorProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Important Priority Flag in Inspector */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-300 text-xs flex items-center justify-between">
+                  <span>Prioritet & Nålning</span>
+                  <div className="flex items-center gap-1 text-[10px] text-red-400 font-bold">
+                    <Pin className="w-3 h-3 fill-red-400" />
+                    <span>Z-Index Överst</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleBatchImportant()}
+                  className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 ${
+                    anyImportant
+                      ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-950/50 ring-1 ring-red-400'
+                      : 'bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 hover:border-red-500/50 hover:text-red-300'
+                  }`}
+                >
+                  <Pin className={`w-4 h-4 ${anyImportant ? 'fill-white text-white rotate-12' : 'text-red-400'}`} />
+                  <span>
+                    {anyImportant
+                      ? `Viktig flagga aktiv (${activeNotes.filter((n) => n.isImportant).length} st) – Återställ`
+                      : `Markera som Viktig (Röd färgskala, Pin-ikon överst)`}
+                  </span>
+                </button>
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  Viktiga anteckningar får en iögonfallande röd färgskala, en markerad Pin-ikon och hålls alltid synliga överst på canvasen (z-index).
+                </p>
               </div>
 
               {/* Batch Color Themes */}

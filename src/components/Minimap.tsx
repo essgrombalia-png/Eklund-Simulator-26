@@ -386,7 +386,11 @@ export const Minimap: React.FC<MinimapProps> = ({
                     width: snW,
                     height: snH,
                   }}
-                  className="absolute rounded-[2px] border border-amber-400/50 bg-amber-400/30 pointer-events-none"
+                  className={`absolute rounded-[2px] pointer-events-none transition-all ${
+                    note.isImportant
+                      ? 'border border-red-500 bg-red-500/80 shadow-[0_0_6px_rgba(239,68,68,0.9)] z-20 scale-110'
+                      : 'border border-amber-400/50 bg-amber-400/30'
+                  }`}
                 />
               );
             })}

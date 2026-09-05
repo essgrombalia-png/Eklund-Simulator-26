@@ -3631,8 +3631,10 @@ export const Canvas: React.FC<CanvasProps> = ({
           })}
 
         {/* Digital Post-its Layer */}
-        {stickyNotes.map((note) => {
-          const isNoteSelected = currentSelectedStickyNoteIds.includes(note.id);
+        {[...stickyNotes]
+          .sort((a, b) => (a.isImportant === b.isImportant ? 0 : a.isImportant ? 1 : -1))
+          .map((note) => {
+            const isNoteSelected = currentSelectedStickyNoteIds.includes(note.id);
           return (
             <StickyNoteCard
               key={note.id}

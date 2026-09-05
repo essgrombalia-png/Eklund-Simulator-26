@@ -152,6 +152,18 @@ export const COLOR_STYLES: Record<
   },
 };
 
+export const IMPORTANT_COLOR_STYLE = {
+  cardBg: 'bg-gradient-to-b from-rose-950/98 via-red-950/98 to-rose-950/98 text-rose-50 border-2 border-red-500 backdrop-blur-xl',
+  border: 'border-red-500',
+  headerBg: 'bg-gradient-to-r from-red-900/95 via-rose-900/95 to-red-900/95 border-b border-red-500/80',
+  titleColor: 'text-red-100 font-black drop-shadow-sm',
+  textColor: 'text-rose-50 placeholder-rose-400/60 font-medium',
+  accentDot: 'bg-red-400 shadow-[0_0_10px_rgba(239,68,68,1)] animate-ping',
+  badgeBg: 'bg-red-600/40 text-red-100 border-red-400/70 font-black',
+  shadow: 'shadow-[0_15px_35px_rgba(225,29,72,0.5)]',
+  glow: 'ring-2 ring-red-500 shadow-[0_0_30px_rgba(239,68,68,0.7)]',
+};
+
 const PALETTE_COLORS: { key: StickyNoteColor; label: string; hex: string }[] = [
   { key: 'yellow', label: 'Post-it Gul', hex: '#f59e0b' },
   { key: 'cyan', label: 'Cyber Cyan', hex: '#06b6d4' },
@@ -300,8 +312,10 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
     direction: 'corner' | 'right' | 'bottom';
   } | null>(null);
 
-  const theme = COLOR_STYLES[note.color] || COLOR_STYLES.yellow;
-  const isYellow = note.color === 'yellow';
+  const theme = note.isImportant
+    ? IMPORTANT_COLOR_STYLE
+    : (COLOR_STYLES[note.color] || COLOR_STYLES.yellow);
+  const isYellow = !note.isImportant && note.color === 'yellow';
 
   const currentWidth = liveDimensions?.width ?? (note.width || 240);
   const currentHeight = liveDimensions?.height ?? (note.height || 180);
@@ -875,19 +889,32 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         width: currentWidth,
         height: currentHeight,
         opacity: currentOpacity,
+        zIndex: isSelected ? 50 : note.isImportant ? 40 : 20,
       }}
       className={`group rounded-2xl border ${theme.cardBg} ${theme.shadow} ${
         isSelected
           ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.5)] scale-[1.01]'
+          : note.isImportant
+          ? 'ring-2 ring-red-500/80 shadow-[0_0_25px_rgba(239,68,68,0.55)] scale-[1.005]'
           : note.groupId
           ? 'ring-1 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
           : ''
       } ${
         isResizing ? 'ring-2 ring-cyan-400 shadow-2xl scale-[1.01]' : ''
-      } transition-all duration-75 z-20 overflow-hidden flex flex-col select-none`}
+      } transition-all duration-75 overflow-hidden flex flex-col select-none`}
     >
-      {/* Tape / Pin Decorative Badge at Top */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-3.5 bg-white/40 backdrop-blur-sm rounded-sm border border-white/60 shadow-sm z-30 pointer-events-none" />
+      {/* Tape / Important Pin Decorative Badge at Top */}
+      {note.isImportant ? (
+        <div
+          title="Viktig anteckning – fäst överst med hög prioritet i z-index"
+          className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white border border-red-300 shadow-[0_0_18px_rgba(239,68,68,0.9)] text-[9px] font-black uppercase tracking-wider z-40 animate-pulse pointer-events-none"
+        >
+          <Pin className="w-3 h-3 fill-white text-white rotate-45 shrink-0 drop-shadow" />
+          <span>VIKTIGT</span>
+        </div>
+      ) : (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-3.5 bg-white/40 backdrop-blur-sm rounded-sm border border-white/60 shadow-sm z-30 pointer-events-none" />
+      )}
 
       {/* Header / Drag Bar */}
       <div
@@ -926,6 +953,16 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             </span>
             <Edit2 className="w-2.5 h-2.5 opacity-50 shrink-0" />
           </button>
+
+          {note.isImportant && (
+            <span
+              title="Viktig / Prioriterad anteckning – hålls synlig överst i z-index"
+              className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[8.5px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0 shadow-sm border border-red-300"
+            >
+              <Pin className="w-2.5 h-2.5 fill-white" />
+              <span>Viktig</span>
+            </span>
+          )}
 
           {note.groupId && (
             <span
@@ -1115,7 +1152,42 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             <Palette className="w-3.5 h-3.5" />
           </button>
 
-          {/* Pin / Unpin Button */}
+          {/* Important / Priority Flag Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const nextVal = !note.isImportant;
+              onUpdate({
+                ...note,
+                isImportant: nextVal,
+                color: nextVal ? 'rose' : note.color,
+                updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              });
+            }}
+            title={
+              note.isImportant
+                ? 'Viktig anteckning (Aktiv! Röd färgskala, fäst överst i z-index. Klicka för att ta bort)'
+                : 'Markera som Viktig (Ändrar färgskala till rött tema, sätter Pin-ikon & placerar överst i z-index)'
+            }
+            className={`p-1 rounded-md transition flex items-center gap-1 cursor-pointer ${
+              note.isImportant
+                ? 'bg-red-600 text-white font-black shadow-[0_0_12px_rgba(239,68,68,0.9)] ring-1 ring-red-300'
+                : isYellow
+                ? 'hover:bg-amber-400/90 text-amber-950 hover:text-red-700'
+                : 'hover:bg-red-500/20 text-slate-300 hover:text-red-400'
+            }`}
+          >
+            <Pin
+              className={`w-3.5 h-3.5 transition-transform ${
+                note.isImportant ? 'fill-white text-white rotate-12 scale-110' : 'text-slate-400'
+              }`}
+            />
+            <span className="text-[8.5px] font-black uppercase tracking-wider pr-0.5">
+              {note.isImportant ? 'Viktig' : 'Prio'}
+            </span>
+          </button>
+
+          {/* Pin / Unpin Button (Lås fast position) */}
           <button
             type="button"
             onClick={() => onUpdate({ ...note, isPinned: !note.isPinned })}

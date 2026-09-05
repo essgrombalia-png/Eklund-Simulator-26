@@ -280,6 +280,7 @@ export interface StickyNote {
   height?: number;
   opacity?: number;
   isPinned?: boolean;
+  isImportant?: boolean; // 'viktig' flagga som ger rödtonad färgskala, Pin-ikon och överst i z-index
   author?: string;
   updatedAt?: string;
 
